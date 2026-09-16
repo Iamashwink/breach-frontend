@@ -86,18 +86,18 @@ export const DashboardView: React.FC = () => {
                     <div className="text-[11px] font-semibold tracking-[0.25em]" style={{ color: TONE[id] }}>
                       PATH {id} · {PATHS_DATA[id].title}
                     </div>
-                    <div className="text-[10.5px] text-[#5A6379] mt-1">KEY {PATHS_DATA[id].keyNumber} ({PATHS_DATA[id].discovers}) · Led by {PATHS_DATA[id].lead}</div>
-                    <p className="mt-2 font-lore italic text-[14px] text-[#8B93A9] leading-snug">{PATH_SUBSTORY[id].hook}</p>
-                    <div className="mt-2 text-[11px] text-[#5A6379]">{PATHS_DATA[id].pastSummary} → {PATHS_DATA[id].presentSummary} → {PATHS_DATA[id].futureSummary}</div>
+                    <div className="text-[10.5px] text-[#9AA2B5] mt-1">KEY {PATHS_DATA[id].keyNumber} ({PATHS_DATA[id].discovers}) · Led by {PATHS_DATA[id].lead}</div>
+                    <p className="mt-2 font-lore italic text-[15px] text-[#D5DBE7] leading-snug">{PATH_SUBSTORY[id].hook}</p>
+                    <div className="mt-2 text-[11px] text-[#9AA2B5]">{PATHS_DATA[id].pastSummary} → {PATHS_DATA[id].presentSummary} → {PATHS_DATA[id].futureSummary}</div>
                     {pre && (
                       <div className="mt-3 border-l-2 pl-3 py-0.5" style={{ borderColor: `${TONE[id]}77` }}>
-                        <div className="text-[9px] tracking-[0.25em] text-[#5A6379]">
+                        <div className="text-[9px] tracking-[0.25em] text-[#8B93A9]">
                           PRE-STORY // <span style={{ color: TONE[id] }}>{pre.speaker}</span>
                         </div>
-                        <p className="mt-1 font-lore italic text-[13px] leading-snug text-[#D5DBE7]">“{pre.opener}”</p>
+                        <p className="mt-1 font-lore italic text-[14px] leading-snug text-[#F2F5FA]">“{pre.opener}”</p>
                       </div>
                     )}
-                    <div className="mt-3 text-[11px] text-[#5A6379]">
+                    <div className="mt-3 text-[11px] text-[#8B93A9]">
                       <b style={{ color: TONE[id] }}>{getPathSolvedCount(id)}/10</b> · <b className="text-[#F2F5FA]">{pathPoints(id).toLocaleString()}</b> PTS
                       {sealed && <span className="ml-2 text-[#E84D7E]">■ SEALED</span>}
                       {id === chosenPath && !isPathComplete(id) && <span className="ml-2" style={{ color: TONE[id] }}>● ACTIVE</span>}

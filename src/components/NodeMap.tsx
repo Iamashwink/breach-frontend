@@ -69,8 +69,8 @@ export const NodeMap: React.FC = () => {
   const dimmed = (p: PathId) => focus !== null && focus !== p;
 
   return (
-    <div className="flex-1 bg-[#07090F] scan-faint">
-      <div className="px-4 sm:px-6 pt-4">
+    <div className="flex-1 bg-[#07090F] scan-faint m-0 p-0">
+      <div className="px-4 sm:px-6 pt-0">
         {/* lane keys (focus) + vitals */}
         <div className="flex flex-wrap items-stretch gap-2">
           <span className="self-center text-[10px] tracking-[0.3em] text-[#5A6379] mr-1">CONFLUENCE</span>
@@ -107,7 +107,7 @@ export const NodeMap: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-3 border-t border-[#1E2536]">
+      <div className="mt-0 border-t border-[#1E2536]">
         {/* unified chart */}
         <div className="relative overflow-x-auto p-4">
           <div className="min-w-[860px] max-w-[1060px] mx-auto">

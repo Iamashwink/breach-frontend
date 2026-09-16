@@ -21,6 +21,7 @@ export function viewToHash(view: ViewType, challengeId?: string | null, pathId?:
     case 'GATE': return '#/gate';
     case 'LOGIN': return '#/login';
     case 'DASHBOARD': return '#/dashboard';
+    case 'TEAM': return '#/team';
     case 'MAP': return pathId ? `#/map/${pathId}` : '#/map';
     case 'TRAIL': return pathId ? `#/path/${pathId}` : '#/dashboard';
     case 'CHALLENGE': return challengeId ? `#/challenge/${challengeId}` : '#/challenge';
@@ -44,6 +45,7 @@ export function parseHash(hash: string): ParsedRoute | null {
     case 'dashboard':
     case 'incident':
     case 'paths': return { view: 'DASHBOARD', challengeId: null, pathId: null };
+    case 'team': return { view: 'TEAM', challengeId: null, pathId: null };
     case 'map': return { view: 'MAP', challengeId: null, pathId: asPath(param) };
     case 'path': case 'trail': {
       const p = asPath(param);

@@ -84,7 +84,7 @@ export interface TeamScore {
   country?: string;
 }
 
-export type ViewType = 'GATE' | 'LOGIN' | 'DASHBOARD' | 'MAP' | 'TRAIL' | 'CHALLENGE' | 'CONVERGENCE' | 'BOARD';
+export type ViewType = 'GATE' | 'LOGIN' | 'DASHBOARD' | 'TEAM' | 'MAP' | 'TRAIL' | 'CHALLENGE' | 'CONVERGENCE' | 'BOARD';
 
 export interface UserGameState {
   activePath: PathId;
