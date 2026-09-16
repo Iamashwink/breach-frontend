@@ -12,7 +12,13 @@ const NAV: { label: string; view: ViewType; pathId?: PathId }[] = [
   { label: 'LEADERBOARD', view: 'BOARD' },
 ];
 
-/** Live 15:00 time-glitch countdown. */
+/**
+ * Countdown to the end of the active Time Glitch.
+ *
+ * Glitch windows are scheduled by an admin and served on the board — the
+ * client cannot start one, and the old button that pretended to has been
+ * removed. During a window every solve pays full initial points with no decay.
+ */
 const GlitchTimer: React.FC = () => {
   const { glitchEndsAt } = useGame();
   const [, tick] = useState(0);
@@ -22,7 +28,7 @@ const GlitchTimer: React.FC = () => {
   }, []);
   if (!glitchEndsAt) return <span className="font-display text-4xl tracking-[0.1em] text-[#5A6379]">--:--</span>;
   const ms = Math.max(0, glitchEndsAt - Date.now());
-  if (ms <= 0) return <span className="font-display text-2xl tracking-[0.15em] text-[#E84D7E]">◉ TIME GLITCH ACTIVE</span>;
+  if (ms <= 0) return <span className="font-display text-2xl tracking-[0.15em] text-[#5A6379]">WINDOW CLOSED</span>;
   const mm = Math.floor(ms / 60000).toString().padStart(2, '0');
   const ss = Math.floor((ms % 60000) / 1000).toString().padStart(2, '0');
   return <span className="font-display text-4xl tracking-[0.1em] text-[#5ED6E3]">T−{mm}:{ss}</span>;
@@ -31,9 +37,8 @@ const GlitchTimer: React.FC = () => {
 export const Header: React.FC = () => {
   const {
     currentView, activePath, navigateTo, toggleTour,
-    pathScores, resetProgress,
-    currentUser, logout, chosenPath, isPathComplete, isPathLocked,
-    glitchEndsAt, startGlitch,
+    score, currentUser, logout, chosenPath, isPathComplete, isPathLocked,
+    glitchEndsAt, glitchLabel, refresh,
   } = useGame();
   const [showGlitch, setShowGlitch] = useState(false);
 
@@ -51,7 +56,7 @@ export const Header: React.FC = () => {
     view === 'TRAIL' ? currentView === 'TRAIL' && activePath === pathId : currentView === view;
 
   const openGlitch = () => {
-    if (!glitchEndsAt) startGlitch();
+    void refresh();
     setShowGlitch(true);
   };
 
@@ -61,7 +66,7 @@ export const Header: React.FC = () => {
       <div className="lg:hidden border-b border-[#1E2536] bg-[#0B0E16] px-4 py-3 flex items-center justify-between">
         <button id="brand-logo-btn" onClick={() => navigateTo('GATE')} className="font-display tracking-[0.3em] text-sm text-[#F2F5FA]">BREACH POINT</button>
         <div className="flex items-center gap-3">
-          <button id="header-points-hud" onClick={() => navigateTo('BOARD')} className="text-[12px] text-[#5ED6E3]">■ {pathScores.total.toLocaleString()}</button>
+          <button id="header-points-hud" onClick={() => navigateTo('BOARD')} className="text-[12px] text-[#5ED6E3]">■ {score.toLocaleString()}</button>
           <button id="btn-tour-guide" onClick={() => toggleTour(true)} className="text-[11px] text-[#5A6379]">MANUAL</button>
         </div>
       </div>
@@ -88,7 +93,7 @@ export const Header: React.FC = () => {
 
         <div className="px-5 py-3.5 border-b border-[#1E2536] text-[10px] leading-relaxed tracking-[0.12em]">
           <div className="flex justify-between"><span className="text-[#5A6379]">SCORE</span>
-            <button id="header-points-hud" onClick={() => navigateTo('BOARD')} className="text-[#5ED6E3] cursor-pointer">■ {pathScores.total.toLocaleString()} PTS</button>
+            <button id="header-points-hud" onClick={() => navigateTo('BOARD')} className="text-[#5ED6E3] cursor-pointer">■ {score.toLocaleString()} PTS</button>
           </div>
         </div>
 
@@ -111,8 +116,10 @@ export const Header: React.FC = () => {
             <button id="btn-tour-guide" onClick={() => toggleTour(true)} className="hover:text-[#8B93A9] cursor-pointer">[ MANUAL ]</button>
             {currentUser && <button onClick={logout} className="hover:text-[#E84D7E] cursor-pointer">[ LOGOUT ]</button>}
           </div>
-          <button onClick={() => { if (window.confirm('Purge local record and restart?')) resetProgress(); }} className="mt-2 text-[#454C61] hover:text-[#E84D7E] cursor-pointer">[ PURGE ]</button>
-          <button onClick={openGlitch} className="mt-2 text-[#454C61] hover:text-[#5ED6E3] cursor-pointer">[ TIME GLITCH ]</button>
+          <button onClick={() => void refresh()} className="mt-2 text-[#454C61] hover:text-[#5ED6E3] cursor-pointer">[ SYNC ]</button>
+          <button onClick={openGlitch} className="mt-2 text-[#454C61] hover:text-[#5ED6E3] cursor-pointer">
+            [ TIME GLITCH{glitchEndsAt ? ' ◉' : ''} ]
+          </button>
         </div>
       </aside>
 
@@ -120,15 +127,15 @@ export const Header: React.FC = () => {
       {showGlitch && (
         <DashboardOverlay title="TIME GLITCH" onClose={() => setShowGlitch(false)}>
           <p className="font-lore italic text-[19px] leading-relaxed text-[#F2F5FA]">
-            “Time glitch is about to start in 15 mins. All operatives stand by.”
+            {glitchEndsAt
+              ? `“${glitchLabel ?? 'The clock slips'}. Decay is suspended — every seal pays full value until it closes.”`
+              : '“No slip right now. When one opens, every seal pays its full undecayed value until the window shuts.”'}
           </p>
           <div className="mt-5 text-center">
             <GlitchTimer />
           </div>
-          <div className="mt-5 text-center">
-            <button onClick={() => { startGlitch(); }} className="text-[11px] tracking-[0.2em] text-[#5A6379] hover:text-[#8B93A9] cursor-pointer">
-              ↻ RESTART TIMER
-            </button>
+          <div className="mt-5 text-center text-[10px] tracking-[0.2em] text-[#454C61]">
+            SCHEDULED BY CONTROL · NOT PLAYER-TRIGGERED
           </div>
         </DashboardOverlay>
       )}

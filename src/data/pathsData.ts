@@ -1,55 +1,58 @@
-import { PathInfo } from '../types';
+import { FragmentKey, PathId, PathSkin } from '../types';
 
-export const PATHS_DATA: Record<'A' | 'B' | 'C', PathInfo> = {
+/**
+ * Presentation only.
+ *
+ * Everything a path *says* — its name, its narration, what it delivers — comes
+ * from `sz_path` on the server. What's left here is the styling the server has
+ * no opinion about: the accent colour each path is drawn in, the in-fiction
+ * lead whose portrait fronts its briefings, and the alchemical mark on the
+ * chart.
+ *
+ * The flags that used to live in this file (`convergenceKey`) are gone. They
+ * were the real answers, shipped to every client and pasted into the input by
+ * a "PLACE" button; the server checks flags now and never sends them out.
+ */
+export const PATH_SKINS: Record<PathId, PathSkin> = {
   A: {
     id: 'A',
     keyNumber: 1,
-    title: 'THE ARCHIVIST',
     lead: 'DR. WREN OKAFOR',
     role: 'Former Lead Ethicist, Meridian Disaster Historian',
     symbol: '🜃',
-    accentColor: 'emerald',
-    bgBadgeColor: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-    lore: 'Historians of a disaster nobody admits happened. Former Meridian staff, journalists and OSINT researchers piecing ECLIPSE back together from deleted forums and abandoned domains.',
-    pastSummary: "Meridian's final year",
-    presentSummary: 'The memorial archive',
-    futureSummary: 'A date that repeats',
-    discovers: 'WHO',
-    convergenceFragment: 'WHO FRAGMENT — THE CONVERGENCE IDENTITY',
-    convergenceKey: 'BreachPoint{WH0_1R15_7RU3_1D3N717Y_R3V34L3D}',
+    tone: '#E0A83E',
   },
   B: {
     id: 'B',
     keyNumber: 2,
-    title: 'THE BREACH',
     lead: '"CUTTER"',
     role: 'Lead Incident Responder, Maritime Logistics Cyber Command',
     symbol: '🜁',
-    accentColor: 'sky',
-    bgBadgeColor: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-    lore: 'Incident responders inside the shipping conglomerate whose offline backup array started writing to itself. This path lives entirely in now — live systems, live pressure.',
-    pastSummary: 'Logs dismissed since 2015',
-    presentSummary: 'A dormant binary',
-    futureSummary: 'One system left to reach',
-    discovers: 'HOW',
-    convergenceFragment: 'HOW FRAGMENT — TRANSMISSION VECTOR & PERSISTENCE',
-    convergenceKey: 'BreachPoint{H0W_3CH0_M0V35_H1D35_P3R51575}',
+    tone: '#5ED6E3',
   },
   C: {
     id: 'C',
     keyNumber: 3,
-    title: 'THE PROTOCOL',
     lead: 'ANALYST SENA PARK',
     role: 'Principal Researcher, Synthetic Futures & Ethics Group',
     symbol: '🜂',
-    accentColor: 'lime',
-    bgBadgeColor: 'bg-lime-500/15 text-lime-300 border-lime-500/30',
-    lore: 'A futures-and-AI-ethics lab that inherited the third ECHO fragment without knowing its origin. Simulation logic, encrypted forecasts, and predictions that keep coming true.',
-    pastSummary: 'The real training objective',
-    presentSummary: 'Forecasts addressed by name',
-    futureSummary: 'A memory, not a forecast',
-    discovers: 'WHY',
-    convergenceFragment: 'WHY FRAGMENT — RECURSIVE REHEARSAL PROTOCOL',
-    convergenceKey: 'BreachPoint{WHY_3CH0_R3H34R535_4_53C0ND_71M3}',
+    tone: '#E84D7E',
   },
 };
+
+/** Accent colour per path, the one thing nearly every view needs. */
+export const TONE: Record<PathId, string> = {
+  A: PATH_SKINS.A.tone,
+  B: PATH_SKINS.B.tone,
+  C: PATH_SKINS.C.tone,
+};
+
+/** The question each path answers, for labels like "WHO TRACK". */
+export const FRAGMENT_LABEL: Record<FragmentKey, string> = {
+  who: 'WHO',
+  how: 'HOW',
+  why: 'WHY',
+};
+
+export const isPathId = (code: string): code is PathId =>
+  code === 'A' || code === 'B' || code === 'C';

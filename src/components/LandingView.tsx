@@ -20,7 +20,7 @@ export const LandingView: React.FC = () => {
             </div>
             <div className="mt-3 h-px w-24 bg-[#1E2536]" />
             <p className="mt-4 max-w-md text-[12px] leading-relaxed tracking-[0.1em] text-[#8B93A9]">
-              AXIOS PRESENTS BREACH POINT — ENTER YOUR CALLSIGN TO ACCESS THE ARCHIVE.
+              AXIOS PRESENTS BREACH POINT — SIGN IN, FORM A CELL, OPEN THE ARCHIVE.
             </p>
           </div>
 

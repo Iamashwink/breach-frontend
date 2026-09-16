@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGame } from '../context/GameContext';
-import { getMainStory } from '../services/backend';
+import { MAIN_STORY } from '../data/storyData';
 
 /**
  * Full-story window: covers the whole page above everything else (z-[70])
@@ -8,7 +8,6 @@ import { getMainStory } from '../services/backend';
  */
 export const MainStoryModal: React.FC = () => {
   const { storyOpen, setStoryOpen } = useGame();
-  const MAIN_STORY = getMainStory();
 
   if (!storyOpen) return null;
 

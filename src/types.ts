@@ -2,105 +2,119 @@ export type PathId = 'A' | 'B' | 'C';
 
 export type EraType = 'PAST' | 'PRESENT' | 'FUTURE' | 'ENDGAME';
 
-export interface PathInfo {
+/** Server difficulty, as stored on `core_challenge`. */
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
+
+/** What a path hands over when its final challenge falls. */
+export type FragmentKey = 'who' | 'how' | 'why';
+
+export type ChallengeStatus = 'solved' | 'skipped' | 'open' | 'locked';
+
+/**
+ * Visual identity for a path. Colours, symbols and the in-fiction lead are
+ * presentation; the path's name, what it delivers and its narration come from
+ * the server.
+ */
+export interface PathSkin {
   id: PathId;
   keyNumber: number;
-  title: string;
   lead: string;
   role: string;
   symbol: string;
-  accentColor: string; // 'amber' | 'cyan' | 'purple'
-  bgBadgeColor: string;
-  lore: string;
-  pastSummary: string;
-  presentSummary: string;
-  futureSummary: string;
-  discovers: 'WHO' | 'HOW' | 'WHY';
-  convergenceFragment: string;
-  convergenceKey: string;
+  tone: string;
 }
 
-export interface BriefingSlide {
-  text: string;
-  characterExpression?: string;
-}
-
-export interface ChallengeHint {
-  id: number;
-  cost: number;
-  text: string;
-}
-
+/**
+ * One challenge as the UI renders it: the server's record of it, joined to the
+ * local chart position.
+ *
+ * `id` is the server UUID — the only thing the API accepts. `slot` is the
+ * display code ("A-07"), derived from path + sequence, and is what the hash
+ * router and the node chart key on.
+ */
 export interface Challenge {
-  id: string; // e.g. 'A-01'
+  id: string;
+  slot: string;
   pathId: PathId;
   index: number;
   title: string;
-  subtitle: string;
-  era: 'PAST' | 'PRESENT' | 'FUTURE';
-  location: string;
+  objective: string;
+  era: EraType;
   track: string;
   category: string;
-  difficulty: 'DIFFICULTY I' | 'DIFFICULTY II' | 'DIFFICULTY III';
+  difficulty: Difficulty;
+  /** Undecayed headline value. */
   points: number;
-  rewardBytes: number;
-  solvesCount: number;
-  totalTeams: number;
-  firstBlood: string;
-  objective: string;
-  objectiveQuote?: string;
-  artifactName: string;
-  artifactContent: string;
-  flagFormat: string;
-  acceptedFlags: string[];
-  hints: ChallengeHint[];
-  briefing: {
-    speaker: string;
-    subTag: string;
-    slides: string[];
-  };
-  evidenceSnippet: string;
-  xPosPercent: number; // For SVG graph layout
+  minPoints: number;
+  /** What a solve pays right now — decay applied, path multiplier not. */
+  currentPoints: number;
+  /** Teams that already hold it. */
+  solves: number;
+  maxAttempts: number | null;
+  author: string | null;
+  status: ChallengeStatus;
+  isPathFinal: boolean;
+  /** The briefing shown before the challenge. */
+  preStory: string;
+  /** The debrief. Null until this team has solved it — the server withholds it. */
+  postStory: string | null;
+  xPosPercent: number;
   yPosPercent: number;
+}
+
+/** A challenge belonging to no path: the welcome gate and the convergence final. */
+export interface StandaloneChallenge {
+  id: string;
+  title: string;
+  objective: string;
+  difficulty: Difficulty;
+  points: number;
+  currentPoints: number;
+  status: ChallengeStatus;
+}
+
+export interface PathState {
+  id: string;
+  code: PathId;
+  name: string;
+  delivers: FragmentKey;
+  introNarration: string;
+  isActive: boolean;
+  isAttempted: boolean;
+  isAvailable: boolean;
+  rewardMultiplier: string | null;
+  solved: number;
+  skipped: number;
+  total: number;
+  points: number;
 }
 
 export interface TeamScore {
   rank: number;
+  teamId: string;
   name: string;
   points: number;
-  bytes: number;
-  solves: {
-    pathA: number;
-    pathB: number;
-    pathC: number;
-  };
-  pathPoints: {
-    pathA: number;
-    pathB: number;
-    pathC: number;
-  };
-  lastSubmission: string;
-  specialty?: string;
-  country?: string;
+  solves: number;
+  lastSubmission: string | null;
+  isMe: boolean;
 }
 
-export type ViewType = 'GATE' | 'LOGIN' | 'DASHBOARD' | 'MAP' | 'TRAIL' | 'CHALLENGE' | 'CONVERGENCE' | 'BOARD';
-
-export interface UserGameState {
-  activePath: PathId;
-  activeChallengeId: string | null;
-  solvedChallengeIds: string[];
-  unlockedHintIds: Record<string, number[]>; // challengeId -> hintIds
-  bytesBalance: number;
-  integrityScore: number;
-  elapsedSeconds: number;
-  showBriefingModal: boolean;
-  briefingChallengeId: string | null;
-  convergenceKeys: {
-    key1: string; // WHO
-    key2: string; // HOW
-    key3: string; // WHY
-  };
-  convergenceUnlocked: boolean;
-  tourOpen: boolean;
+export interface Hint {
+  id: string;
+  cost: number;
+  sortOrder: number;
+  requiresHintId: string | null;
+  isUnlocked: boolean;
+  body: string | null;
 }
+
+export type ViewType =
+  | 'GATE'
+  | 'LOGIN'
+  | 'TEAM'
+  | 'DASHBOARD'
+  | 'MAP'
+  | 'TRAIL'
+  | 'CHALLENGE'
+  | 'CONVERGENCE'
+  | 'BOARD';

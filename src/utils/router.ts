@@ -2,28 +2,31 @@ import { PathId, ViewType } from '../types';
 
 export interface ParsedRoute {
   view: ViewType;
-  challengeId: string | null;
+  /** Display code of a challenge, e.g. "A-07". Never a server UUID. */
+  slot: string | null;
   pathId: PathId | null;
 }
 
 /**
  * Hash routing (works on any static host, no server rewrites needed).
- * Every page gets its own URL:
- *   #/gate  #/login  #/dashboard
+ *
+ *   #/gate  #/login  #/team  #/dashboard
  *   #/map  #/path/B  #/challenge/A-07  #/rite  #/board
  *
- * (Legacy #/paths and #/incident links fall through to #/dashboard.)
- *
- * TODO(backend): no changes needed — routes are frontend-only.
+ * Challenge links carry the slot code rather than the server id: a slot is
+ * short, stable across re-seeds and meaningful to a player reading the URL,
+ * whereas a UUID is none of those. The context resolves the slot to the id it
+ * needs when it calls the API.
  */
-export function viewToHash(view: ViewType, challengeId?: string | null, pathId?: PathId): string {
+export function viewToHash(view: ViewType, slot?: string | null, pathId?: PathId): string {
   switch (view) {
     case 'GATE': return '#/gate';
     case 'LOGIN': return '#/login';
+    case 'TEAM': return '#/team';
     case 'DASHBOARD': return '#/dashboard';
     case 'MAP': return pathId ? `#/map/${pathId}` : '#/map';
     case 'TRAIL': return pathId ? `#/path/${pathId}` : '#/dashboard';
-    case 'CHALLENGE': return challengeId ? `#/challenge/${challengeId}` : '#/challenge';
+    case 'CHALLENGE': return slot ? `#/challenge/${slot}` : '#/challenge';
     case 'CONVERGENCE': return '#/rite';
     case 'BOARD': return '#/board';
     default: return '#/dashboard';
@@ -39,22 +42,25 @@ export function parseHash(hash: string): ParsedRoute | null {
     p === 'A' || p === 'B' || p === 'C' ? p : null;
 
   switch (head) {
-    case 'gate': return { view: 'GATE', challengeId: null, pathId: null };
-    case 'login': return { view: 'LOGIN', challengeId: null, pathId: null };
+    case 'gate': return { view: 'GATE', slot: null, pathId: null };
+    case 'login': return { view: 'LOGIN', slot: null, pathId: null };
+    case 'team': return { view: 'TEAM', slot: null, pathId: null };
     case 'dashboard':
     case 'incident':
-    case 'paths': return { view: 'DASHBOARD', challengeId: null, pathId: null };
-    case 'map': return { view: 'MAP', challengeId: null, pathId: asPath(param) };
+    case 'paths': return { view: 'DASHBOARD', slot: null, pathId: null };
+    case 'map': return { view: 'MAP', slot: null, pathId: asPath(param) };
     case 'path': case 'trail': {
       const p = asPath(param);
-      return p ? { view: 'TRAIL', challengeId: null, pathId: p } : { view: 'MAP', challengeId: null, pathId: null };
+      return p ? { view: 'TRAIL', slot: null, pathId: p } : { view: 'MAP', slot: null, pathId: null };
     }
     case 'challenge':
-      if (param && /^[ABC]-\d{2}$/.test(param)) return { view: 'CHALLENGE', challengeId: param, pathId: asPath(param[0]) };
-      return { view: 'MAP', challengeId: null, pathId: null };
+      if (param && /^[ABC]-\d{2}$/.test(param)) {
+        return { view: 'CHALLENGE', slot: param, pathId: asPath(param[0]) };
+      }
+      return { view: 'MAP', slot: null, pathId: null };
     case 'rite':
-    case 'convergence': return { view: 'CONVERGENCE', challengeId: null, pathId: null };
-    case 'board': return { view: 'BOARD', challengeId: null, pathId: null };
+    case 'convergence': return { view: 'CONVERGENCE', slot: null, pathId: null };
+    case 'board': return { view: 'BOARD', slot: null, pathId: null };
     default: return null;
   }
 }
