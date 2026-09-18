@@ -67,6 +67,10 @@ export const ChallengeView: React.FC = () => {
   const prev = i > 0 ? all[i - 1] : null;
   const next = i >= 0 && i < all.length - 1 ? all[i + 1] : null;
 
+  const [flagHover, setFlagHover] = useState(false);
+  // Fixed gold from the PRE-TRANSMISSION box (Path A amber), not the path tone.
+  const GOLD = '#E0A83E';
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!flag.trim() || busy) return;
@@ -225,26 +229,76 @@ export const ChallengeView: React.FC = () => {
           )}
         </div>
 
-        <form onSubmit={submit} className="mt-10 border-t border-[#1E2536] pt-8 max-w-4xl">
-          <div className="text-[10px] tracking-[0.3em] text-[#454C61]">CONFESS THE FLAG</div>
-          <div className="mt-4 flex items-center gap-3 border-b border-[#2C3550] pb-3">
-            <span className="text-[#454C61]">$</span>
-            <input
-              value={flag}
-              onChange={(e) => setFlag(e.target.value)}
-              placeholder="BreachPoint{...}"
-              disabled={closed}
-              className="flex-1 bg-transparent text-[15px] text-[#F2F5FA] focus:outline-none placeholder-[#454C61] disabled:opacity-40"
+        <form onSubmit={submit} className="mt-10 max-w-4xl">
+          <div
+            className="relative border px-5 py-5 transition-all duration-300"
+            onMouseEnter={() => setFlagHover(true)}
+            onMouseLeave={() => setFlagHover(false)}
+            style={{
+              borderColor: flagHover ? GOLD : `${GOLD}3A`,
+              background: flagHover
+                ? `linear-gradient(180deg, ${GOLD}26, rgba(11,14,22,0.9) 60%)`
+                : `linear-gradient(180deg, ${GOLD}07, rgba(11,14,22,0.92) 60%)`,
+              boxShadow: flagHover
+                ? `0 0 0 1px ${GOLD}55, 0 0 42px ${GOLD}66, inset 0 0 24px ${GOLD}11`
+                : 'none',
+            }}
+          >
+            <div
+              className="absolute left-0 top-0 h-full transition-all duration-300"
+              style={{
+                width: '2px',
+                background: flagHover ? GOLD : `${GOLD}66`,
+                boxShadow: flagHover ? `0 0 20px ${GOLD}, 0 0 40px ${GOLD}88` : 'none',
+              }}
             />
-            <button
-              type="submit"
-              id="btn-submit-flag"
-              disabled={closed || busy || !flag.trim()}
-              className="text-[13px] font-semibold disabled:opacity-30 cursor-pointer"
-              style={{ color: tone }}
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[10px] font-bold tracking-[0.3em] text-[#8B93A9]">
+                <span
+                  className="mr-2 inline-block border px-1.5 py-0.5 text-[10px] transition-all duration-300"
+                  style={
+                    flagHover
+                      ? { background: GOLD, borderColor: GOLD, color: '#07090F', boxShadow: `0 0 12px ${GOLD}` }
+                      : { background: 'transparent', borderColor: `${GOLD}55`, color: GOLD }
+                  }
+                >
+                  {'$>'}
+                </span>
+                CONFESS THE FLAG
+              </div>
+              <div
+                className="text-[9px] tracking-[0.25em]"
+                style={{ color: flagHover ? GOLD : `${GOLD}77` }}
+              >
+                {closed ? 'SEALED' : 'AWAITING INPUT'}
+              </div>
+            </div>
+            <div
+              className="mt-4 flex items-center gap-3 border bg-black/40 px-4 py-3 transition-colors duration-300"
+              style={{ borderColor: flagHover ? `${GOLD}BB` : '#232B40' }}
             >
-              {busy ? 'CHECKING…' : 'Hand over →'}
-            </button>
+              <span className="font-bold" style={{ color: flagHover ? GOLD : `${GOLD}77` }}>$</span>
+              <input
+                value={flag}
+                onChange={(e) => setFlag(e.target.value)}
+                placeholder="BreachPoint{...}"
+                disabled={closed}
+                className="flex-1 bg-transparent text-[15px] tracking-[0.05em] text-[#F2F5FA] focus:outline-none placeholder-[#454C61] disabled:opacity-40"
+              />
+              <button
+                type="submit"
+                id="btn-submit-flag"
+                disabled={closed || busy || !flag.trim()}
+                className="shrink-0 px-5 py-2.5 text-[12px] font-bold tracking-[0.2em] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-300"
+                style={
+                  flagHover
+                    ? { background: GOLD, color: '#07090F', boxShadow: `0 0 22px ${GOLD}88` }
+                    : { background: 'transparent', color: GOLD, border: `1px solid ${GOLD}55`, boxShadow: 'none' }
+                }
+              >
+                {busy ? 'CHECKING…' : 'Hand over →'}
+              </button>
+            </div>
           </div>
 
           {closed && (
