@@ -117,4 +117,8 @@ export type ViewType =
   | 'TRAIL'
   | 'CHALLENGE'
   | 'CONVERGENCE'
-  | 'BOARD';
+  | 'BOARD'
+  | 'ADMIN'
+  | 'ADMIN_EVENTS'
+  | 'ADMIN_CHALLENGES'
+  | 'ADMIN_GLITCHES';

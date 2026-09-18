@@ -81,6 +81,12 @@ export const Header: React.FC = () => {
             {n.label}{pathMark(n.pathId)}
           </button>
         ))}
+        {currentUser?.isAdmin && (
+          <button id="nav-btn-admin-mobile" onClick={() => go('ADMIN')}
+            className={`text-[11px] tracking-[0.15em] py-1 whitespace-nowrap cursor-pointer ${currentView.startsWith('ADMIN') ? 'text-[#E0A83E]' : 'text-[#E0A83E]/60'}`}>
+            ADMIN
+          </button>
+        )}
       </div>
 
       {/* desktop rail — classified archive */}
@@ -113,6 +119,16 @@ export const Header: React.FC = () => {
               </button>
             );
           })}
+          {currentUser?.isAdmin && (
+            <>
+              <div className="mx-5 my-2 border-t border-[#1E2536]" />
+              <button id="nav-btn-admin" onClick={() => go('ADMIN')}
+                className={`w-full flex items-center px-5 py-[9px] font-display text-[13.5px] tracking-[0.18em] transition-colors cursor-pointer ${currentView.startsWith('ADMIN') ? 'text-[#E0A83E] bg-[#E0A83E]/[0.06]' : 'text-[#E0A83E]/60 hover:text-[#E0A83E]'}`}
+                style={currentView.startsWith('ADMIN') ? { boxShadow: 'inset 2px 0 0 #E0A83E' } : {}}>
+                <span>ADMIN</span>
+              </button>
+            </>
+          )}
         </nav>
 
         <div className="mt-auto border-t border-[#1E2536] px-5 py-4 text-[10px] tracking-[0.14em]">
