@@ -5,6 +5,7 @@ import { PathId, ViewType } from '../types';
 
 const NAV: { label: string; view: ViewType; pathId?: PathId }[] = [
   { label: 'DASHBOARD', view: 'DASHBOARD' },
+  { label: 'TEAM', view: 'TEAM' },
   { label: 'MAP', view: 'MAP' },
   { label: 'PATH A', view: 'TRAIL', pathId: 'A' },
   { label: 'PATH B', view: 'TRAIL', pathId: 'B' },
@@ -55,6 +56,9 @@ export const Header: React.FC = () => {
   const isOn = (view: ViewType, pathId?: PathId) =>
     view === 'TRAIL' ? currentView === 'TRAIL' && activePath === pathId : currentView === view;
 
+  // Map views sit flush against the top bar: no rail divider, no corner gap.
+  const mapFlush = currentView === 'MAP' || currentView === 'TRAIL';
+
   const openGlitch = () => {
     void refresh();
     setShowGlitch(true);
@@ -80,7 +84,7 @@ export const Header: React.FC = () => {
       </div>
 
       {/* desktop rail — classified archive */}
-      <aside className="hidden lg:flex w-[224px] shrink-0 flex-col bg-[#0A0D15] border-r border-[#1E2536] min-h-screen sticky top-0 h-screen">
+      <aside className={`hidden lg:flex w-[224px] shrink-0 flex-col bg-[#0A0D15] min-h-screen sticky top-0 h-screen m-0 ${mapFlush ? 'border-r-0' : 'border-r border-[#1E2536]'}`}>
         <div className="px-5 pt-5 pb-4 border-b border-[#1E2536]">
           <div className="flex items-start justify-between">
             <button id="brand-logo-btn" onClick={() => navigateTo('GATE')} className="text-left">

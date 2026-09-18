@@ -7,6 +7,7 @@ import { LandingView } from './components/LandingView';
 import { TeamGate } from './components/TeamGate';
 import { EventWindowView } from './components/EventWindowView';
 import { DashboardView } from './components/DashboardView';
+import { TeamView } from './components/TeamView';
 import { NodeMap } from './components/NodeMap';
 import { PathTrail } from './components/PathTrail';
 import { ChallengeView } from './components/ChallengeView';
@@ -102,6 +103,7 @@ const AppContent: React.FC = () => {
 
   const renderCurrentView = () => {
     switch (currentView) {
+      case 'TEAM': return <TeamView />;
       case 'MAP': return <NodeMap />;
       case 'TRAIL': return <PathTrail />;
       case 'CHALLENGE': return <ChallengeView />;
@@ -112,9 +114,9 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="soot min-h-screen bg-[#07090F] text-[#D5DBE7] flex flex-col lg:flex-row font-mono">
+    <div className="soot min-h-screen bg-[#07090F] text-[#D5DBE7] flex flex-col lg:flex-row font-mono gap-0 p-0 m-0">
       <Header />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 gap-0 p-0 m-0">
         <StatusPanel />
         <main className="flex-1 flex flex-col">{renderCurrentView()}</main>
       </div>
