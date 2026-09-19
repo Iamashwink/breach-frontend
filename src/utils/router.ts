@@ -29,6 +29,10 @@ export function viewToHash(view: ViewType, slot?: string | null, pathId?: PathId
     case 'CHALLENGE': return slot ? `#/challenge/${slot}` : '#/challenge';
     case 'CONVERGENCE': return '#/rite';
     case 'BOARD': return '#/board';
+    case 'ADMIN': return '#/admin';
+    case 'ADMIN_EVENTS': return '#/admin/events';
+    case 'ADMIN_CHALLENGES': return '#/admin/challenges';
+    case 'ADMIN_GLITCHES': return '#/admin/glitches';
     default: return '#/dashboard';
   }
 }
@@ -61,6 +65,13 @@ export function parseHash(hash: string): ParsedRoute | null {
     case 'rite':
     case 'convergence': return { view: 'CONVERGENCE', slot: null, pathId: null };
     case 'board': return { view: 'BOARD', slot: null, pathId: null };
+    case 'admin':
+      switch (param) {
+        case 'events': return { view: 'ADMIN_EVENTS', slot: null, pathId: null };
+        case 'challenges': return { view: 'ADMIN_CHALLENGES', slot: null, pathId: null };
+        case 'glitches': return { view: 'ADMIN_GLITCHES', slot: null, pathId: null };
+        default: return { view: 'ADMIN', slot: null, pathId: null };
+      }
     default: return null;
   }
 }

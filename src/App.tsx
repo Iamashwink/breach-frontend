@@ -7,6 +7,11 @@ import { LandingView } from './components/LandingView';
 import { TeamGate } from './components/TeamGate';
 import { EventWindowView } from './components/EventWindowView';
 import { DashboardView } from './components/DashboardView';
+import { TeamView } from './components/TeamView';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+import { AdminEvents } from './components/admin/AdminEvents';
+import { AdminChallenges } from './components/admin/AdminChallenges';
+import { AdminGlitches } from './components/admin/AdminGlitches';
 import { NodeMap } from './components/NodeMap';
 import { PathTrail } from './components/PathTrail';
 import { ChallengeView } from './components/ChallengeView';
@@ -44,8 +49,17 @@ const BootScreen: React.FC<{ title: string; detail?: string; onRetry?: () => voi
   </Shell>
 );
 
+const isAdminView = (v: string) => v.startsWith('ADMIN');
+
+const AdminShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="soot min-h-screen bg-[#07090F] text-[#D5DBE7] font-mono">
+    {children}
+    <ToastBanner />
+  </div>
+);
+
 const AppContent: React.FC = () => {
-  const { phase, bootError, retryBoot, currentView, glitchEndsAt, refresh, glitchSample } = useGame();
+  const { phase, bootError, retryBoot, currentView, currentUser, navigateTo, glitchEndsAt, refresh, glitchSample } = useGame();
 
   // The gate is public lore — readable before a session exists.
   if (currentView === 'GATE') {
@@ -80,6 +94,25 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Admin console — accessible in any phase as long as the user is authenticated and admin.
+  if (isAdminView(currentView) && currentUser?.isAdmin) {
+    const renderAdminView = () => {
+      switch (currentView) {
+        case 'ADMIN_EVENTS': return <AdminEvents />;
+        case 'ADMIN_CHALLENGES': return <AdminChallenges />;
+        case 'ADMIN_GLITCHES': return <AdminGlitches />;
+        default: return <AdminDashboard />;
+      }
+    };
+    return <AdminShell>{renderAdminView()}</AdminShell>;
+  }
+
+  // Non-admin trying to access admin routes — bounce to dashboard.
+  if (isAdminView(currentView)) {
+    navigateTo('DASHBOARD');
+    return null;
+  }
+
   // Outside the event window there is nothing to play, but teams can still be
   // formed before the gun — so the lobby yields to the team gate on request.
   if (phase === 'pending' || phase === 'ended') {
@@ -102,6 +135,7 @@ const AppContent: React.FC = () => {
 
   const renderCurrentView = () => {
     switch (currentView) {
+      case 'TEAM': return <TeamView />;
       case 'MAP': return <NodeMap />;
       case 'TRAIL': return <PathTrail />;
       case 'CHALLENGE': return <ChallengeView />;
@@ -112,9 +146,9 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="soot min-h-screen bg-[#07090F] text-[#D5DBE7] flex flex-col lg:flex-row font-mono">
+    <div className="soot min-h-screen bg-[#07090F] text-[#D5DBE7] flex flex-col lg:flex-row font-mono gap-0 p-0 m-0">
       <Header />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 gap-0 p-0 m-0">
         <StatusPanel />
         <main className="flex-1 flex flex-col">{renderCurrentView()}</main>
       </div>

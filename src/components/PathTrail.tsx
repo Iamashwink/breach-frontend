@@ -64,9 +64,9 @@ export const PathTrail: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 bg-[#07090F] scan-faint">
-      <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 py-6">
-        <div className="border border-[#1E2536] bg-[#0B0E16]/40">
+    <div className="flex-1 w-full h-full bg-[#07090F] scan-faint m-0 p-0 flex flex-col">
+      <div className="w-full flex-1 m-0 p-0">
+        <div className="border-x-0 border-t-0 border-b border-[#1E2536] bg-[#0B0E16]/40 m-0">
           <svg viewBox="0 0 1200 620" className="w-full h-auto select-none">
             {ERAS.map((e) => (
               <g key={e.label}>
@@ -184,7 +184,7 @@ export const PathTrail: React.FC = () => {
             </g>
           </svg>
         </div>
-        <div className="mt-2 text-[10px] tracking-[0.2em] text-[#454C61]">
+        <div className="px-4 py-2 text-[10px] tracking-[0.2em] text-[#454C61] border-t border-[#1E2536]/60">
           {locked
             ? 'SEALED TRAIL — VIEW ONLY · YOUR TEAM IS ON ANOTHER PATH'
             : 'CLICK A SEAL FOR PRE-STORY → CHALLENGE · HOVER FOR DETAILS'}

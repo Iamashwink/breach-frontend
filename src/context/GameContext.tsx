@@ -601,7 +601,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Deep links and browser back/forward.
   useEffect(() => {
-    if (phase !== 'ready') return;
+    if (phase !== 'ready' && phase !== 'no-team' && phase !== 'pending' && phase !== 'ended') return;
 
     const applyRoute = (route: ParsedRoute) => {
       if (route.slot) {
@@ -621,16 +621,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initial = parseHash(window.location.hash);
     if (initial) applyRoute(initial);
-    else setCurrentView('DASHBOARD');
+    else if (phase === 'ready') setCurrentView('DASHBOARD');
 
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, [phase]);
 
   // Keep the view legal for the phase: no board pages without a board.
+  // Admin views bypass this — admins can access the console without a team.
   useEffect(() => {
+    const hash = window.location.hash;
+    const isAdminHash = hash.startsWith('#/admin');
     if (phase === 'unauthenticated') setCurrentView('LOGIN');
-    else if (phase === 'no-team') setCurrentView('TEAM');
+    else if (phase === 'no-team' && !isAdminHash) setCurrentView('TEAM');
   }, [phase]);
 
   // ---------------------------------------------------------------- UI ----

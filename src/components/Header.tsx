@@ -5,6 +5,7 @@ import { PathId, ViewType } from '../types';
 
 const NAV: { label: string; view: ViewType; pathId?: PathId }[] = [
   { label: 'DASHBOARD', view: 'DASHBOARD' },
+  { label: 'TEAM', view: 'TEAM' },
   { label: 'MAP', view: 'MAP' },
   { label: 'PATH A', view: 'TRAIL', pathId: 'A' },
   { label: 'PATH B', view: 'TRAIL', pathId: 'B' },
@@ -55,6 +56,9 @@ export const Header: React.FC = () => {
   const isOn = (view: ViewType, pathId?: PathId) =>
     view === 'TRAIL' ? currentView === 'TRAIL' && activePath === pathId : currentView === view;
 
+  // Map views sit flush against the top bar: no rail divider, no corner gap.
+  const mapFlush = currentView === 'MAP' || currentView === 'TRAIL';
+
   const openGlitch = () => {
     void refresh();
     setShowGlitch(true);
@@ -77,10 +81,16 @@ export const Header: React.FC = () => {
             {n.label}{pathMark(n.pathId)}
           </button>
         ))}
+        {currentUser?.isAdmin && (
+          <button id="nav-btn-admin-mobile" onClick={() => go('ADMIN')}
+            className={`text-[11px] tracking-[0.15em] py-1 whitespace-nowrap cursor-pointer ${currentView.startsWith('ADMIN') ? 'text-[#E0A83E]' : 'text-[#E0A83E]/60'}`}>
+            ADMIN
+          </button>
+        )}
       </div>
 
       {/* desktop rail — classified archive */}
-      <aside className="hidden lg:flex w-[224px] shrink-0 flex-col bg-[#0A0D15] border-r border-[#1E2536] min-h-screen sticky top-0 h-screen">
+      <aside className={`hidden lg:flex w-[224px] shrink-0 flex-col bg-[#0A0D15] min-h-screen sticky top-0 h-screen m-0 ${mapFlush ? 'border-r-0' : 'border-r border-[#1E2536]'}`}>
         <div className="px-5 pt-5 pb-4 border-b border-[#1E2536]">
           <div className="flex items-start justify-between">
             <button id="brand-logo-btn" onClick={() => navigateTo('GATE')} className="text-left">
@@ -109,6 +119,16 @@ export const Header: React.FC = () => {
               </button>
             );
           })}
+          {currentUser?.isAdmin && (
+            <>
+              <div className="mx-5 my-2 border-t border-[#1E2536]" />
+              <button id="nav-btn-admin" onClick={() => go('ADMIN')}
+                className={`w-full flex items-center px-5 py-[9px] font-display text-[13.5px] tracking-[0.18em] transition-colors cursor-pointer ${currentView.startsWith('ADMIN') ? 'text-[#E0A83E] bg-[#E0A83E]/[0.06]' : 'text-[#E0A83E]/60 hover:text-[#E0A83E]'}`}
+                style={currentView.startsWith('ADMIN') ? { boxShadow: 'inset 2px 0 0 #E0A83E' } : {}}>
+                <span>ADMIN</span>
+              </button>
+            </>
+          )}
         </nav>
 
         <div className="mt-auto border-t border-[#1E2536] px-5 py-4 text-[10px] tracking-[0.14em]">

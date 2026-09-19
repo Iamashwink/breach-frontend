@@ -10,8 +10,8 @@ export const StatusPanel: React.FC = () => {
   const solvedTotal = board?.solveCount ?? solvedSlots.length;
 
   return (
-    <div className="sticky top-0 z-30 border-b border-[#1E2536] bg-[#0A0D15] px-5 sm:px-8 py-3">
-      <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-[10px] tracking-[0.16em]">
+    <div className="sticky top-0 z-30 border-b border-[#1E2536] bg-[#0A0D15] px-5 sm:px-8 py-3 w-full m-0 rounded-none">
+      <div className="w-full flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-[10px] tracking-[0.16em]">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
           <span className="text-[#5A6379]">TEAM <b className="text-[#F2F5FA]">{teamName}</b></span>
           <span className="text-[#5A6379]">CLOSES <b className="text-[#5ED6E3]">{formattedTimer}</b></span>
