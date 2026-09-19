@@ -62,6 +62,23 @@ export const WelcomeGate: React.FC = () => {
         {welcome.objective}
       </p>
 
+      {welcome.resourceLink && (
+        <div className="mt-3">
+          <a
+            href={welcome.resourceLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono font-semibold tracking-[0.15em] border border-[#5ED6E3]/40 bg-[#5ED6E3]/10 text-[#5ED6E3] hover:bg-[#5ED6E3]/20 transition-all cursor-pointer"
+          >
+            <span>
+              {welcome.resourceLink.includes('drive.google')
+                ? '⬇ DOWNLOAD ATTACHMENT'
+                : '↗ ACCESS CHALLENGE TARGET'}
+            </span>
+          </a>
+        </div>
+      )}
+
       <form onSubmit={submit} className="mt-4 flex items-center gap-3 border-b border-[#2C3550] pb-2">
         <span className="text-[#454C61]">$</span>
         <input

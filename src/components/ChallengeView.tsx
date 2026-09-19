@@ -152,6 +152,24 @@ export const ChallengeView: React.FC = () => {
           {activeChallenge.objective}
         </p>
 
+        {/* Challenge Attachment / Target Link */}
+        {activeChallenge.resourceLink && (
+          <div className="mt-5">
+            <a
+              href={activeChallenge.resourceLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2.5 px-4 py-2.5 text-[11px] font-mono font-semibold tracking-[0.2em] border border-[#5ED6E3]/40 bg-[#5ED6E3]/10 text-[#5ED6E3] hover:bg-[#5ED6E3]/20 hover:border-[#5ED6E3]/70 hover:shadow-[0_0_15px_rgba(94,214,227,0.15)] transition-all cursor-pointer"
+            >
+              <span>
+                {activeChallenge.resourceLink.includes('drive.google')
+                  ? '⬇ DOWNLOAD ATTACHMENT'
+                  : '↗ ACCESS CHALLENGE TARGET'}
+              </span>
+            </a>
+          </div>
+        )}
+
         {/* Pre-transmission narration, served per-challenge from sz_path_challenge. */}
         {activeChallenge.preStory && (
           <div

@@ -88,6 +88,7 @@ function hydrate(
     isPathFinal: challenge.isPathFinal,
     preStory: challenge.preStory,
     postStory: challenge.postStory,
+    resourceLink: challenge.resourceLink ?? null,
     xPosPercent: pos.x,
     yPosPercent: pos.y,
   };
@@ -173,6 +174,7 @@ export function challengesForPath(board: ApiBoard | null, pathId: PathId): Chall
       isPathFinal: index === total,
       preStory: '',
       postStory: null,
+      resourceLink: null,
       xPosPercent: pos.x,
       yPosPercent: pos.y,
     };
@@ -232,6 +234,7 @@ function toStandalone(c: ApiStandaloneChallenge): StandaloneChallenge {
     points: c.initialPoints,
     currentPoints: c.currentPoints,
     status: c.status,
+    resourceLink: c.resourceLink ?? null,
   };
 }
 

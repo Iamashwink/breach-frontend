@@ -177,6 +177,7 @@ export interface ApiBoardChallenge {
   preStory: string;
   /** Withheld by the server until the challenge is solved. */
   postStory: string | null;
+  resourceLink?: string | null;
 }
 
 export interface ApiStandaloneChallenge {
@@ -192,6 +193,7 @@ export interface ApiStandaloneChallenge {
   maxAttempts: number | null;
   author: string | null;
   status: ChallengeStatus;
+  resourceLink?: string | null;
   /**
    * True for the convergence final (gated on all three fragments), false for
    * the welcome gate. Derived server-side from the prerequisite graph.

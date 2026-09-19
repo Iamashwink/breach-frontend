@@ -58,6 +58,7 @@ export interface Challenge {
   preStory: string;
   /** The debrief. Null until this team has solved it — the server withholds it. */
   postStory: string | null;
+  resourceLink?: string | null;
   xPosPercent: number;
   yPosPercent: number;
 }
@@ -71,6 +72,7 @@ export interface StandaloneChallenge {
   points: number;
   currentPoints: number;
   status: ChallengeStatus;
+  resourceLink?: string | null;
 }
 
 export interface PathState {
