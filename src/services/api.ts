@@ -155,6 +155,7 @@ export interface ApiEvent {
 export interface ApiTeamMember {
   userId: string;
   username: string;
+  displayName?: string | null;
   role: 'captain' | 'member';
 }
 

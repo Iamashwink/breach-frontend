@@ -127,6 +127,7 @@ interface GameContextType {
   windowMs: number | null;
   team: ApiTeam | null;
   teamName: string;
+  refreshTeam: () => Promise<void>;
   createTeam: (name: string) => Promise<ActionResult>;
   joinTeam: (name: string, joinCode: string) => Promise<ActionResult>;
 
@@ -346,23 +347,44 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const retryBoot = useCallback(() => setBootNonce((n) => n + 1), []);
 
-  /** Re-reads the board. Safe to call from anywhere; failures are non-fatal. */
+  /** Re-reads user team information from the server. */
+  const refreshTeam = useCallback(async () => {
+    if (!eventId) return;
+    try {
+      const freshTeam = await api.myTeam(eventId);
+      setTeam(freshTeam);
+    } catch {
+      /* non-fatal */
+    }
+  }, [eventId]);
+
+  /** Re-reads the board and team. Safe to call from anywhere; failures are non-fatal. */
   const refresh = useCallback(async () => {
     if (!eventId) return;
     try {
-      const fresh = await api.board(eventId);
-      setBoard(fresh);
-    } catch (error) {
-      // A transient failure must not blank a board the player is reading. The
-      // next poll will pick it up; an expired session and a closed event are
-      // the exceptions — neither resolves by waiting.
-      if (error instanceof ApiError && error.status === 401) {
-        setToken(null);
-        setCurrentUser(null);
-        setPhase('unauthenticated');
-      } else if (isEventClosed(error)) {
-        setPhase('ended');
+      const [freshBoard, freshTeam] = await Promise.allSettled([
+        api.board(eventId),
+        api.myTeam(eventId),
+      ]);
+      if (freshBoard.status === 'fulfilled') {
+        setBoard(freshBoard.value);
+      } else {
+        const error = freshBoard.reason;
+        if (error instanceof ApiError && error.status === 401) {
+          setToken(null);
+          setCurrentUser(null);
+          setPhase('unauthenticated');
+          return;
+        } else if (isEventClosed(error)) {
+          setPhase('ended');
+          return;
+        }
       }
+      if (freshTeam.status === 'fulfilled') {
+        setTeam(freshTeam.value);
+      }
+    } catch {
+      /* non-fatal */
     }
   }, [eventId]);
 
@@ -1010,6 +1032,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     windowMs,
     team,
     teamName: team?.name ?? board?.team.name ?? 'OPERATIVE',
+    refreshTeam,
     createTeam,
     joinTeam,
     board,
