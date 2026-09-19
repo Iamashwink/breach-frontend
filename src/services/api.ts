@@ -12,10 +12,21 @@
  * runs CORS without `credentials`.
  */
 
-/** Base URL of the API, e.g. http://localhost:8080. */
-export const API_BASE: string = (
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8080'
-).replace(/\/$/, '');
+function normalizeApiBase(raw: string | undefined): string {
+  if (!raw) return 'http://localhost:8080';
+  let trimmed = raw.trim().replace(/\/$/, '');
+  if (!trimmed) return '';
+  // If protocol was omitted (e.g. breach-backend-production.up.railway.app), default to https://
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('/')) {
+    trimmed = `https://${trimmed}`;
+  }
+  return trimmed;
+}
+
+/** Base URL of the API, e.g. https://breach-backend-production.up.railway.app */
+export const API_BASE: string = normalizeApiBase(
+  import.meta.env.VITE_API_BASE_URL as string | undefined
+);
 
 /** Slug of the event this build plays. Resolved to an id once, at boot. */
 export const EVENT_SLUG: string =
