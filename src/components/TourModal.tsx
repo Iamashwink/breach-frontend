@@ -21,12 +21,12 @@ export const TourModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80" onClick={() => toggleTour(false)}>
       <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="text-[10px] tracking-[0.3em] text-[#454C61] flex justify-between"><span>MANUAL · {step + 1}/{pages.length}</span><button onClick={() => toggleTour(false)}>✕</button></div>
+        <div className="text-[10px] tracking-[0.3em] text-[#8B93A9] flex justify-between"><span>MANUAL · {step + 1}/{pages.length}</span><button onClick={() => toggleTour(false)} className="hover:text-[#F2F5FA] transition-colors">✕</button></div>
         <h2 className="mt-4 font-display text-2xl uppercase tracking-wide text-[#F2F5FA]">{pages[step][0]}</h2>
         <p className="mt-3 text-[14px] text-[#8B93A9] leading-relaxed">{pages[step][1]}</p>
         <div className="mt-8 flex justify-between text-[12px] font-semibold tracking-[0.15em]">
-          <button onClick={() => setStep(v => Math.max(0, v - 1))} disabled={step === 0} className="text-[#454C61] disabled:opacity-30">← BACK</button>
-          <button id="btn-tour-next-step" onClick={() => { if (step < pages.length - 1) setStep(v => v + 1); else { toggleTour(false); navigateTo('DASHBOARD'); } }} className="text-[#5ED6E3] border-b border-[#5ED6E3] pb-0.5">
+          <button onClick={() => setStep(v => Math.max(0, v - 1))} disabled={step === 0} className="text-[#8B93A9] hover:text-[#F2F5FA] disabled:opacity-30 transition-colors">← BACK</button>
+          <button id="btn-tour-next-step" onClick={() => { if (step < pages.length - 1) setStep(v => v + 1); else { toggleTour(false); navigateTo('DASHBOARD'); } }} className="text-[#5ED6E3] hover:text-[#7CE3EE] border-b border-[#5ED6E3] pb-0.5 transition-colors">
             {step === pages.length - 1 ? 'OPEN DASHBOARD →' : 'NEXT →'}
           </button>
         </div>

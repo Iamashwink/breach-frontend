@@ -121,7 +121,7 @@ export const DashboardView: React.FC = () => {
           </button>
           <button
             onClick={() => navigateTo('TRAIL', null, code)}
-            className="text-[10px] tracking-[0.2em] text-center text-[#5A6379] hover:text-[#8B93A9] cursor-pointer"
+            className="text-[10px] tracking-[0.2em] text-center text-[#8B93A9] hover:text-[#5ED6E3] cursor-pointer transition-colors"
           >
             PREVIEW TRAIL →
           </button>
@@ -140,7 +140,7 @@ export const DashboardView: React.FC = () => {
         >
           SWITCH IN-BETWEEN (80%)
         </button>
-        <div className="text-[9px] text-center text-[#5A6379] tracking-wider">
+        <div className="text-[9px] text-center text-[#9BA6BC] font-medium tracking-wider">
           🔒 LOCKED FOR FREE (FINISH PATH {chosenPath} FIRST)
         </div>
       </div>
@@ -191,19 +191,19 @@ export const DashboardView: React.FC = () => {
                   <div className="text-[11px] font-semibold tracking-[0.25em]" style={{ color: TONE[code] }}>
                     PATH {code} · {path?.name ?? '—'}
                   </div>
-                  <div className="text-[10.5px] text-[#5A6379] mt-1">
+                  <div className="text-[10.5px] text-[#8B93A9] mt-1">
                     KEY {skin.keyNumber} ({path ? FRAGMENT_LABEL[path.delivers] : '—'}) · Led by {skin.lead}
                   </div>
-                  <p className="mt-2 font-lore italic text-[14px] text-[#8B93A9] leading-snug line-clamp-4">
+                  <p className="mt-2 font-lore italic text-[14px] text-[#C6CCDA] leading-snug line-clamp-4">
                     {path?.introNarration ?? 'Awaiting transmission.'}
                   </p>
-                  <div className="mt-3 text-[11px] text-[#5A6379]">
+                  <div className="mt-3 text-[11px] text-[#A6B2C8]">
                     <b style={{ color: TONE[code] }}>{path?.solved ?? 0}/{path?.total ?? 10}</b>
                     {' · '}
                     <b className="text-[#F2F5FA]">{(path?.points ?? 0).toLocaleString()}</b> PTS
                     {path?.isActive && <span className="ml-2" style={{ color: TONE[code] }}>● ACTIVE</span>}
                     {held && <span className="ml-2 text-[#5ED6E3]">✦ FRAGMENT HELD</span>}
-                    {path?.skipped ? <span className="ml-2 text-[#E84D7E]">{path.skipped} SKIPPED</span> : null}
+                    {path?.skipped ? <span className="ml-2 text-[#E84D7E] font-medium">{path.skipped} SKIPPED</span> : null}
                   </div>
                   <div className="mt-auto">{renderPathAction(code)}</div>
                 </div>
@@ -220,7 +220,7 @@ export const DashboardView: React.FC = () => {
             className="w-full border border-[#5ED6E3]/40 bg-[#5ED6E3]/[0.04] px-4 py-5 text-center hover:bg-[#5ED6E3]/[0.08] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <span className="block text-[13px] font-bold tracking-[0.25em] text-[#5ED6E3]">RESUME</span>
-            <span className="mt-1 block text-[10px] tracking-[0.15em] text-[#5A6379]">
+            <span className="mt-1 block text-[10px] tracking-[0.15em] text-[#8B93A9]">
               {resumeChallenge ? `${resumeChallenge.slot} · ${resumeChallenge.title}` : 'NO ACTIVE TRAIL'}
             </span>
           </button>
@@ -238,8 +238,8 @@ export const DashboardView: React.FC = () => {
         </button>
 
         {team?.joinCode && (
-          <div className="mt-6 text-[10px] tracking-[0.25em] text-[#454C61]">
-            CELL {team.name} · JOIN CODE <span className="text-[#5A6379]">{team.joinCode}</span>
+          <div className="mt-6 text-[11px] tracking-[0.25em] text-[#8B93A9]">
+            CELL {team.name} · JOIN CODE <span className="text-[#5ED6E3] font-bold">{team.joinCode}</span>
           </div>
         )}
       </div>
@@ -267,14 +267,14 @@ export const DashboardView: React.FC = () => {
               </>
             )}
           </p>
-          <p className="mt-3 text-[12px] leading-relaxed text-[#5A6379]">
+          <p className="mt-3 text-[12px] leading-relaxed text-[#A6B2C8]">
             Points already banked are preserved. Challenges on previous paths remain{' '}
-            <b className="text-[#8B93A9]">UNLOCKED and AVAILABLE TO SOLVE</b> at any time.
+            <b className="text-[#F2F5FA]">UNLOCKED and AVAILABLE TO SOLVE</b> at any time.
           </p>
           <div className="mt-6 flex items-center justify-between">
             <button
               onClick={() => setPendingSwitch(null)}
-              className="text-[11px] tracking-[0.2em] text-[#5A6379] hover:text-[#8B93A9] cursor-pointer"
+              className="text-[11px] tracking-[0.2em] text-[#8B93A9] hover:text-[#F2F5FA] cursor-pointer transition-colors"
             >
               ← STAY ON PATH {chosenPath}
             </button>

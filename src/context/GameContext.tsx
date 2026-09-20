@@ -202,7 +202,7 @@ interface GameContextType {
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 /** How often the board is re-read while the player sits on a page. */
-const BOARD_POLL_MS = 20_000;
+const BOARD_POLL_MS = 5_000;
 
 const errorMessage = (error: unknown): string => {
   if (error instanceof ApiError || error instanceof NetworkError) return error.message;

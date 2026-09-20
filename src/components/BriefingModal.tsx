@@ -57,23 +57,23 @@ export const BriefingModal: React.FC = () => {
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-4 sm:px-6 sm:pb-6 pointer-events-none">
       <div className="pointer-events-auto w-full max-w-2xl border border-[#1E2536] bg-[#0B0E16] px-6 py-5">
-        <div className="text-[10px] tracking-[0.3em] text-[#454C61] flex justify-between">
+        <div className="text-[10px] tracking-[0.3em] text-[#8B93A9] flex justify-between">
           <span>WITNESS LOG · {briefingChallenge.slot}</span>
-          <button onClick={closeBriefing} className="cursor-pointer">CLOSE ✕</button>
+          <button onClick={closeBriefing} className="hover:text-[#E84D7E] transition-colors cursor-pointer">CLOSE ✕</button>
         </div>
-        <div className="mt-2 text-[12px] text-[#5A6379]">
-          <span className="text-[#5ED6E3]">{character.name}</span> — PATH {briefingChallenge.pathId} ·{' '}
+        <div className="mt-2 text-[12px] text-[#8B93A9]">
+          <span className="text-[#5ED6E3] font-medium">{character.name}</span> — PATH {briefingChallenge.pathId} ·{' '}
           {briefingChallenge.title}
         </div>
         <div onClick={next} className="mt-6 min-h-[140px] cursor-pointer">
           <p className="font-lore text-2xl leading-relaxed text-[#F2F5FA]">{shown}</p>
         </div>
         <div className="mt-8 flex items-center justify-between">
-          <span className="text-[11px] text-[#454C61]">{idx + 1} / {slides.length}</span>
+          <span className="text-[11px] text-[#8B93A9]">{idx + 1} / {slides.length}</span>
           <div className="flex gap-5 text-[12px] font-semibold tracking-[0.15em]">
-            <button id="btn-briefing-map-return" onClick={closeBriefing} className="text-[#454C61] cursor-pointer">FILE</button>
-            <button id="btn-briefing-skip-to-challenge" onClick={enterChallenge} className="text-[#454C61] cursor-pointer">SKIP</button>
-            <button id="btn-briefing-next" onClick={next} className="text-[#5ED6E3] border-b border-[#5ED6E3] pb-0.5 cursor-pointer">
+            <button id="btn-briefing-map-return" onClick={closeBriefing} className="text-[#8B93A9] hover:text-[#F2F5FA] transition-colors cursor-pointer">FILE</button>
+            <button id="btn-briefing-skip-to-challenge" onClick={enterChallenge} className="text-[#8B93A9] hover:text-[#5ED6E3] transition-colors cursor-pointer">SKIP</button>
+            <button id="btn-briefing-next" onClick={next} className="text-[#5ED6E3] border-b border-[#5ED6E3] pb-0.5 hover:brightness-125 cursor-pointer">
               {idx < slides.length - 1 ? 'NEXT →' : 'FACE IT →'}
             </button>
           </div>

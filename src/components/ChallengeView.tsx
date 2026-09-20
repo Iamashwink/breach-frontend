@@ -104,10 +104,10 @@ export const ChallengeView: React.FC = () => {
   return (
     <div className="flex-1 bg-[#07090F]">
       <div className="w-full max-w-6xl mx-auto px-6 sm:px-10 py-10">
-        <div className="flex justify-between text-[11px] tracking-[0.2em] text-[#454C61]">
+        <div className="flex justify-between text-[11px] tracking-[0.2em] text-[#8B93A9]">
           <button
             onClick={() => navigateTo('MAP', null, activeChallenge.pathId)}
-            className="hover:text-[#8B93A9] cursor-pointer"
+            className="hover:text-[#5ED6E3] font-medium transition-colors cursor-pointer"
           >
             ← CHART
           </button>
@@ -120,8 +120,8 @@ export const ChallengeView: React.FC = () => {
                 ⚡ EDIT CHALLENGE
               </button>
             )}
-            <button onClick={() => prev && navigateTo('CHALLENGE', prev.slot)} disabled={!prev} className="disabled:opacity-30 cursor-pointer">←</button>
-            <button onClick={() => next && navigateTo('CHALLENGE', next.slot)} disabled={!next} className="disabled:opacity-30 cursor-pointer">→</button>
+            <button onClick={() => prev && navigateTo('CHALLENGE', prev.slot)} disabled={!prev} className="disabled:opacity-30 hover:text-[#F2F5FA] cursor-pointer">←</button>
+            <button onClick={() => next && navigateTo('CHALLENGE', next.slot)} disabled={!next} className="disabled:opacity-30 hover:text-[#F2F5FA] cursor-pointer">→</button>
           </span>
         </div>
 
@@ -132,7 +132,7 @@ export const ChallengeView: React.FC = () => {
         <h1 className="mt-3 font-display uppercase tracking-wide text-3xl sm:text-5xl leading-tight text-[#F2F5FA]">
           {activeChallenge.title}
         </h1>
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-[12px] text-[#5A6379]">
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-[12px] text-[#8B93A9]">
           <span
             className="font-bold tracking-[0.15em] px-1.5 py-0.5 border"
             style={{ color: diff.color, borderColor: `${diff.color}66` }}
@@ -145,7 +145,7 @@ export const ChallengeView: React.FC = () => {
             · {Math.round(activeChallenge.currentPoints * effectiveMultiplier)} PTS
           </span>
           {activeChallenge.currentPoints < activeChallenge.points && (
-            <span className="text-[#454C61]">
+            <span className="text-[#8B93A9]">
               · decayed from {activeChallenge.points}
               {activeChallenge.solves > 0 && ` by ${activeChallenge.solves} solve${activeChallenge.solves === 1 ? '' : 's'}`}
             </span>
@@ -391,10 +391,10 @@ export const ChallengeView: React.FC = () => {
                     You have <b>{skips.remaining}</b> of {skips.quota} skips left.
                   </p>
                   <div className="mt-3 flex items-center gap-5 text-[11px] tracking-[0.2em]">
-                    <button onClick={() => setConfirmSkip(false)} className="text-[#5A6379] hover:text-[#8B93A9] cursor-pointer">
+                    <button onClick={() => setConfirmSkip(false)} className="text-[#A6B2C8] hover:text-[#F2F5FA] font-medium transition-colors cursor-pointer">
                       ← CANCEL
                     </button>
-                    <button onClick={doSkip} disabled={busy} className="text-[#E84D7E] font-bold disabled:opacity-40 cursor-pointer">
+                    <button onClick={doSkip} disabled={busy} className="text-[#FF6B9B] hover:text-[#FFA3C0] font-bold disabled:opacity-40 transition-colors cursor-pointer">
                       SPEND A SKIP →
                     </button>
                   </div>
@@ -404,7 +404,7 @@ export const ChallengeView: React.FC = () => {
                   type="button"
                   onClick={() => setConfirmSkip(true)}
                   disabled={skips.remaining <= 0}
-                  className="text-[11px] tracking-[0.2em] text-[#5A6379] hover:text-[#E84D7E] disabled:opacity-30 disabled:hover:text-[#5A6379] cursor-pointer"
+                  className="text-[11px] tracking-[0.2em] font-semibold text-[#E84D7E] hover:text-[#FF7096] hover:brightness-125 disabled:opacity-40 disabled:hover:text-[#E84D7E] cursor-pointer border border-[#E84D7E]/40 hover:border-[#E84D7E] bg-[#E84D7E]/10 px-3.5 py-1.5 transition-all inline-block"
                 >
                   {skips.remaining > 0
                     ? `SKIP CHALLENGE — ${skips.remaining}/${skips.quota} LEFT →`

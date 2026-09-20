@@ -5,7 +5,7 @@ import { useGame } from '../context/GameContext';
  * TEAM panel — Displays live team metadata, join code, and full operative roster from the backend.
  */
 export const TeamView: React.FC = () => {
-  const { currentUser, team, teamName, refreshTeam, navigateTo } = useGame();
+  const { currentUser, team, teamName, refreshTeam, board } = useGame();
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -37,26 +37,40 @@ export const TeamView: React.FC = () => {
     setRefreshing(false);
   };
 
-  // Resolve members from live backend team state
-  const rawMembers = team?.members && team.members.length > 0 ? team.members : null;
+  // Resolve members from live backend team state or board.team fallback
+  const rawMembers =
+    team?.members && team.members.length > 0
+      ? team.members
+      : (board?.team as any)?.members && (board?.team as any).members.length > 0
+      ? (board?.team as any).members
+      : null;
+
+  const resolveMemberName = (m: { displayName?: string | null; username?: string; userId?: string }) => {
+    if (m.displayName && m.displayName.trim().length > 0) return m.displayName;
+    if (m.username && m.username.trim().length > 0) return m.username;
+    if (m.userId === currentUser?.id && currentUser?.username) return currentUser.username;
+    return m.userId ? `OPERATIVE_${m.userId.slice(0, 4).toUpperCase()}` : 'OPERATIVE';
+  };
 
   const members = rawMembers
-    ? rawMembers.map((m) => ({
+    ? rawMembers.map((m: any) => ({
         id: m.userId,
-        name: m.displayName || m.username || 'Operative',
+        name: resolveMemberName(m),
         isLeader: m.role === 'captain',
         isCurrent: m.userId === currentUser?.id,
+        roleTitle: m.role === 'captain' ? '★ CELL CAPTAIN' : 'OPERATIVE',
       }))
     : [
         {
           id: currentUser?.id ?? 'me',
-          name: currentUser?.displayName || currentUser?.username || teamName,
+          name: currentUser?.displayName || currentUser?.username || 'OPERATIVE',
           isLeader: team?.myRole === 'captain' || true,
           isCurrent: true,
+          roleTitle: team?.myRole === 'captain' ? '★ CELL CAPTAIN' : 'OPERATIVE',
         },
       ];
 
-  const leader = members.find((m) => m.isLeader) || members[0];
+  const leader = members.find((m: any) => m.isLeader) || members[0];
 
   return (
     <div className="flex-1 bg-[#07090F] scan-faint">
@@ -66,7 +80,7 @@ export const TeamView: React.FC = () => {
           <button
             onClick={handleManualRefresh}
             disabled={refreshing}
-            className="border border-[#1E2536] bg-[#0A0D15] hover:border-[#5ED6E3] hover:text-[#5ED6E3] px-3 py-1 text-[10px] tracking-[0.2em] text-[#5A6379] transition-colors cursor-pointer"
+            className="border border-[#5ED6E3]/40 bg-[#5ED6E3]/10 hover:bg-[#5ED6E3]/20 hover:border-[#5ED6E3] px-3 py-1 text-[10px] tracking-[0.2em] text-[#5ED6E3] hover:text-[#7CE3EE] transition-colors cursor-pointer font-medium"
           >
             {refreshing ? 'SYNCING…' : 'REFRESH ↻'}
           </button>
@@ -92,54 +106,69 @@ export const TeamView: React.FC = () => {
                 {copied ? '✓ COPIED' : 'COPY CODE'}
               </button>
             </div>
-            <p className="mt-2 text-[11px] text-[#8B93A9] leading-relaxed">
+            <p className="mt-2 text-[11px] text-[#A6B2C8] leading-relaxed">
               Share this join code with your teammates. They can enter it under <span className="text-[#D5DBE7]">JOIN CELL</span> to link into this team.
             </p>
           </div>
         )}
 
         {/* Team Leader */}
-        <div className="mt-6 border border-[#1E2536] bg-[#0B0E16]/70 px-4 py-3 flex flex-col items-start gap-1">
-          <span className="text-[10px] tracking-[0.25em] text-[#5A6379]">CELL LEADER</span>
-          <div className="flex items-center gap-2">
-            <span className="text-[14px] tracking-[0.12em] text-[#F2F5FA] font-medium">★ {leader.name}</span>
-            {leader.isCurrent && (
-              <span className="text-[9px] tracking-[0.2em] bg-[#5ED6E3]/10 text-[#5ED6E3] px-1.5 py-0.5 border border-[#5ED6E3]/30">
-                YOU
+        <div className="mt-6 border border-[#1E2536] bg-[#0B0E16]/70 px-5 py-3.5 flex items-center justify-between">
+          <div className="flex flex-col items-start gap-1">
+            <span className="text-[10px] tracking-[0.25em] text-[#C6CCDA] font-semibold">CELL LEADER</span>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[15px] tracking-[0.08em] text-[#F2F5FA] font-mono font-bold">
+                ★ {leader.name}
               </span>
-            )}
+              {leader.isCurrent && (
+                <span className="text-[9px] tracking-[0.2em] bg-[#5ED6E3]/15 text-[#5ED6E3] px-2 py-0.5 border border-[#5ED6E3]/40 font-mono font-bold">
+                  YOU
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] tracking-[0.2em] text-[#E0A83E] bg-[#E0A83E]/10 border border-[#E0A83E]/40 px-2.5 py-1 font-semibold inline-flex items-center gap-1.5">
+              ★ CELL CAPTAIN
+            </span>
           </div>
         </div>
 
         {/* Members Roster */}
-        <div className="mt-4 border border-[#1E2536] bg-[#0B0E16]/40">
-          <div className="px-4 py-2.5 border-b border-[#1E2536] flex items-center justify-between text-[10px] tracking-[0.25em] text-[#5A6379]">
-            <span>ROSTER · {members.length} / 4 OPERATIVES</span>
-            <span className="text-[9px] text-[#454C61]">MAX 4 CELL MEMBERS</span>
+        <div className="mt-5 border border-[#1E2536] bg-[#0B0E16]/40">
+          <div className="px-5 py-3 border-b border-[#1E2536] flex items-center justify-between text-[10px] tracking-[0.25em] text-[#C6CCDA] font-semibold bg-[#07090F]/80">
+            <span>CELL ROSTER · {members.length} / 4 OPERATIVES</span>
+            <span className="text-[9px] text-[#9BA6BC] font-medium tracking-[0.15em]">MAX 4 CELL MEMBERS</span>
           </div>
 
           <div className="divide-y divide-[#1E2536]/60">
-            {members.map((m) => (
+            {members.map((m: any) => (
               <div
                 key={m.id}
-                className="px-4 py-3 flex items-center justify-between hover:bg-[#0E1320]/50 transition-colors"
+                className="px-5 py-3.5 flex items-center justify-between hover:bg-[#0E1320]/50 transition-colors"
               >
+                {/* Left: Name and current user badge */}
                 <div className="flex items-center gap-3">
-                  <span className="text-[13px] tracking-[0.12em] text-[#D5DBE7] font-mono">{m.name}</span>
+                  <span className="text-[14px] tracking-[0.08em] text-[#F2F5FA] font-mono font-semibold">
+                    {m.name}
+                  </span>
                   {m.isCurrent && (
-                    <span className="text-[9px] tracking-[0.2em] bg-[#5ED6E3]/10 text-[#5ED6E3] px-1.5 py-0.5 border border-[#5ED6E3]/30">
+                    <span className="text-[9px] tracking-[0.2em] bg-[#5ED6E3]/15 text-[#5ED6E3] px-2 py-0.5 border border-[#5ED6E3]/40 font-mono font-bold">
                       YOU
                     </span>
                   )}
                 </div>
 
-                <div>
+                {/* Right: Role badge */}
+                <div className="text-right">
                   {m.isLeader ? (
-                    <span className="text-[10px] tracking-[0.2em] text-[#E0A83E] flex items-center gap-1">
-                      ★ CAPTAIN
+                    <span className="text-[10px] tracking-[0.2em] text-[#E0A83E] bg-[#E0A83E]/10 border border-[#E0A83E]/40 px-2.5 py-1 font-semibold inline-flex items-center gap-1.5">
+                      ★ CELL CAPTAIN
                     </span>
                   ) : (
-                    <span className="text-[10px] tracking-[0.2em] text-[#5A6379]">OPERATIVE</span>
+                    <span className="text-[10px] tracking-[0.2em] text-[#A6B2C8] bg-[#141A28] border border-[#1E2536] px-2.5 py-1 font-medium inline-block">
+                      OPERATIVE
+                    </span>
                   )}
                 </div>
               </div>
@@ -148,7 +177,7 @@ export const TeamView: React.FC = () => {
         </div>
 
         {/* Role guidance */}
-        <div className="mt-6 border-l-2 border-[#1E2536] pl-4 py-1 text-[11px] text-[#5A6379] leading-relaxed">
+        <div className="mt-6 border-l-2 border-[#3A4358] pl-4 py-1 text-[11px] text-[#A6B2C8] leading-relaxed">
           Points, node unlocks, skips, and convergence fragments are synchronized in real-time across all cell operatives.
         </div>
       </div>

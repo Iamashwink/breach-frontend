@@ -87,15 +87,15 @@ export const PathTrail: React.FC = () => {
           <svg viewBox="0 0 1200 620" className="w-full h-auto select-none">
             {ERAS.map((e) => (
               <g key={e.label}>
-                <line x1={e.x0} y1="0" x2={e.x0} y2="620" stroke="#1E2536" strokeWidth="1" strokeDasharray="2 5" />
-                <text x={e.x0 + 12} y={22} fill="#5A6379" fontSize="10" letterSpacing="2" fontFamily="IBM Plex Mono">{e.label}</text>
-                <text x={e.x0 + 12} y={36} fill="#2C3550" fontSize="8" letterSpacing="1" fontFamily="IBM Plex Mono">{e.sub}</text>
+                <line x1={e.x0} y1="0" x2={e.x0} y2="620" stroke="#364158" strokeWidth="1.3" strokeDasharray="4 4" />
+                <text x={e.x0 + 12} y={22} fill="#5ED6E3" fontSize="11" fontWeight="bold" letterSpacing="2" fontFamily="IBM Plex Mono">{e.label}</text>
+                <text x={e.x0 + 12} y={37} fill="#A6B2C8" fontSize="8.5" fontWeight="500" letterSpacing="1.5" fontFamily="IBM Plex Mono">{e.sub}</text>
               </g>
             ))}
-            <line x1="1200" y1="0" x2="1200" y2="620" stroke="#1E2536" strokeWidth="1" strokeDasharray="2 5" />
+            <line x1="1200" y1="0" x2="1200" y2="620" stroke="#364158" strokeWidth="1.3" strokeDasharray="4 4" />
 
-            <polyline points={thread} fill="none" stroke="#2C3550" strokeWidth="5" opacity="0.35" />
-            <polyline points={thread} fill="none" stroke={color} strokeWidth="1.6" strokeDasharray="9 7" opacity="0.6" />
+            <polyline points={thread} fill="none" stroke="#2C3550" strokeWidth="6" opacity="0.5" />
+            <polyline points={thread} fill="none" stroke={color} strokeWidth="2.4" strokeDasharray="8 5" opacity="0.95" />
 
             {nodes.map((c, i) => {
               const p = pt(i);
@@ -107,7 +107,6 @@ export const PathTrail: React.FC = () => {
               const meta = DIFFICULTY_META[c.difficulty];
               const fills = starFills(c.difficulty);
               const labelDx = Math.min(1120, Math.max(80, p.x)) - p.x;
-              const youFlip = p.x > 980;
               const popupBelow = p.y < 170;
               return (
                 <g
@@ -131,25 +130,27 @@ export const PathTrail: React.FC = () => {
                         <animate attributeName="r" values="30;40;30" dur="3s" repeatCount="indefinite" />
                         <animate attributeName="opacity" values="0.55;0;0.55" dur="3s" repeatCount="indefinite" />
                       </circle>
-                      <g transform={youFlip ? 'translate(-34,-46)' : 'translate(34,-46)'}>
-                        <rect x={youFlip ? '-38' : '-6'} y="-11" width="44" height="20" fill="#0B0E16" stroke="#F2F5FA" />
-                        <text x={youFlip ? '-16' : '16'} y="3.5" textAnchor="middle" fontSize="9" letterSpacing="1" fill="#F2F5FA" fontFamily="IBM Plex Mono">YOU</text>
+                      {/* Highlighted YOU indicator positioned to the left so it never disturbs adjacent nodes */}
+                      <g transform="translate(-34,-46)">
+                        <rect x="-38" y="-11" width="46" height="22" rx="2" fill="#07090F" stroke={color} strokeWidth="1.6" />
+                        <rect x="-38" y="-11" width="46" height="22" rx="2" fill={`${color}25`} />
+                        <text x="-15" y="4" textAnchor="middle" fontSize="9.5" fontWeight="bold" letterSpacing="1.5" fill={color} fontFamily="IBM Plex Mono">YOU</text>
                       </g>
                     </>
                   )}
                   <circle
                     r="26"
                     fill={held ? `${color}2E` : '#0B0E16'}
-                    stroke={held || isNext ? (isNext ? '#F2F5FA' : color) : wasSkipped ? '#E84D7E66' : '#2C3550'}
-                    strokeWidth={held || isNext ? 2 : 1.2}
-                    opacity={locked && !held ? 0.6 : 1}
+                    stroke={held || isNext ? color : wasSkipped ? '#E84D7E88' : '#455273'}
+                    strokeWidth={held || isNext ? 2.2 : 1.4}
+                    opacity={locked && !held ? 0.75 : 1}
                   />
                   <text
                     y="7"
                     textAnchor="middle"
                     fontSize="16"
                     fontWeight="bold"
-                    fill={held || isNext ? '#F2F5FA' : '#454C61'}
+                    fill={held || isNext ? '#F2F5FA' : !revealed ? '#8B93A9' : '#C6CCDA'}
                     fontFamily="IBM Plex Mono"
                   >
                     {held ? '●' : wasSkipped ? '–' : !revealed ? '×' : String(c.index).padStart(2, '0')}
@@ -159,8 +160,9 @@ export const PathTrail: React.FC = () => {
                     y="52"
                     textAnchor="middle"
                     fontSize="10"
+                    fontWeight="600"
                     letterSpacing="2"
-                    fill={held || isNext ? '#8B93A9' : '#3A4358'}
+                    fill={held || isNext ? '#F2F5FA' : !revealed ? '#9BA6BC' : '#8B93A9'}
                     fontFamily="IBM Plex Mono"
                   >
                     {revealed ? c.title.slice(0, 18).toUpperCase() : 'SEALED'}
@@ -171,22 +173,22 @@ export const PathTrail: React.FC = () => {
                       <text y="-20" textAnchor="middle" fontSize="9" letterSpacing="2" fill="#F2F5FA" fontFamily="IBM Plex Mono">
                         {c.category.toUpperCase()}
                       </text>
-                      <text y="-4" textAnchor="middle" fontSize="8.5" letterSpacing="1.5" fill="#8B93A9" fontFamily="IBM Plex Mono">
+                      <text y="-4" textAnchor="middle" fontSize="8.5" letterSpacing="1.5" fill="#C6CCDA" fontFamily="IBM Plex Mono">
                         {c.title.toUpperCase().slice(0, 28)}
                       </text>
-                      <text y="10" textAnchor="middle" fontSize="8" letterSpacing="1" fill="#5A6379" fontFamily="IBM Plex Mono">
+                      <text y="10" textAnchor="middle" fontSize="8" letterSpacing="1" fill="#A6B2C8" fontFamily="IBM Plex Mono">
                         {c.era} · {c.currentPoints} PTS
                       </text>
                       <text y="27" textAnchor="middle" fontSize="11" letterSpacing="3" fontFamily="IBM Plex Mono">
-                        {fills.map((f, fi) =>
+                        {fills.map((f, fi) => (
                           f === 1 ? (
                             <tspan key={fi} fill={meta.color}>★</tspan>
                           ) : f === 0.5 ? (
                             <tspan key={fi} fill={meta.color} opacity={0.5}>★</tspan>
                           ) : (
-                            <tspan key={fi} fill="#454C61">☆</tspan>
-                          ),
-                        )}
+                            <tspan key={fi} fill="#5A6379">☆</tspan>
+                          )
+                        ))}
                       </text>
                     </g>
                   )}
@@ -197,14 +199,16 @@ export const PathTrail: React.FC = () => {
             <g transform={`translate(${echo.x},${echo.y})`} className="cursor-pointer" onClick={() => navigateTo('CONVERGENCE')}>
               <circle r="30" fill="#E84D7E14" stroke="#E84D7E" strokeWidth="1.5" />
               <text y="5" textAnchor="middle" fontSize="11" letterSpacing="2" fill="#E84D7E" fontFamily="IBM Plex Mono">ECHO</text>
-              <text y="48" textAnchor="middle" fontSize="8.5" letterSpacing="2" fill="#5A6379" fontFamily="IBM Plex Mono">CONVERGENCE</text>
+              <text y="48" textAnchor="middle" fontSize="8.5" letterSpacing="2" fill="#A6B2C8" fontFamily="IBM Plex Mono">CONVERGENCE</text>
             </g>
           </svg>
         </div>
-        <div className="px-4 py-2 text-[10px] tracking-[0.2em] text-[#454C61] border-t border-[#1E2536]/60">
-          {locked
-            ? 'SEALED TRAIL — VIEW ONLY · YOUR TEAM IS ON ANOTHER PATH'
-            : 'CLICK A SEAL FOR PRE-STORY → CHALLENGE · HOVER FOR DETAILS'}
+        <div className="px-4 py-2.5 text-[11px] tracking-[0.2em] font-medium border-t border-[#1E2536]">
+          {locked ? (
+            <span className="text-[#E84D7E] font-semibold">SEALED TRAIL — VIEW ONLY · YOUR TEAM IS ON ANOTHER PATH</span>
+          ) : (
+            <span className="text-[#A6B2C8]">CLICK A SEAL FOR PRE-STORY → CHALLENGE · HOVER FOR DETAILS</span>
+          )}
         </div>
       </div>
     </div>

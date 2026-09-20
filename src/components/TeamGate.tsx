@@ -35,7 +35,7 @@ export const TeamGate: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#07090F] text-[#D5DBE7] font-mono scan-faint flex items-center justify-center px-5 py-12">
       <div className="w-full max-w-lg">
-        <div className="text-[10px] tracking-[0.3em] text-[#5A6379]">
+        <div className="text-[10px] tracking-[0.3em] text-[#9BA6BC]">
           {event?.name ?? 'BREACHPOINT'} // OPERATIVE {currentUser?.username}
         </div>
 
@@ -44,7 +44,7 @@ export const TeamGate: React.FC = () => {
           <h1 className="font-display font-bold uppercase leading-[1.05] tracking-tight text-[#F2F5FA] text-3xl">
             No one works<br />this alone.
           </h1>
-          <p className="mt-4 text-[13px] leading-relaxed text-[#8B93A9]">
+          <p className="mt-4 text-[13px] leading-relaxed text-[#A6B2C8]">
             Form a cell or join one. Up to four operatives; progress, points and skips are
             shared across the whole team.
           </p>
@@ -53,34 +53,34 @@ export const TeamGate: React.FC = () => {
             <button
               type="button"
               onClick={() => { setMode('create'); setError(null); }}
-              className={`pb-1 cursor-pointer ${!isJoin ? 'text-[#5ED6E3] border-b border-[#5ED6E3]' : 'text-[#5A6379] hover:text-[#8B93A9]'}`}
+              className={`pb-1 cursor-pointer transition-colors ${!isJoin ? 'text-[#5ED6E3] border-b border-[#5ED6E3]' : 'text-[#9BA6BC] hover:text-[#D5DBE7]'}`}
             >
               CREATE CELL
             </button>
             <button
               type="button"
               onClick={() => { setMode('join'); setError(null); }}
-              className={`pb-1 cursor-pointer ${isJoin ? 'text-[#5ED6E3] border-b border-[#5ED6E3]' : 'text-[#5A6379] hover:text-[#8B93A9]'}`}
+              className={`pb-1 cursor-pointer transition-colors ${isJoin ? 'text-[#5ED6E3] border-b border-[#5ED6E3]' : 'text-[#9BA6BC] hover:text-[#D5DBE7]'}`}
             >
               JOIN WITH CODE
             </button>
           </div>
 
           <form onSubmit={submit} className="mt-6">
-            <label className="block text-[10px] tracking-[0.3em] text-[#5A6379]">TEAM NAME</label>
+            <label className="block text-[10px] tracking-[0.3em] text-[#C6CCDA] font-medium">TEAM NAME</label>
             <div className="mt-2 border border-[#1E2536] bg-black/40 px-4 py-3 focus-within:border-[#5ED6E3]/60">
               <input
                 id="team-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="TEAM_KRONOS"
-                className="w-full bg-transparent font-mono text-[14px] tracking-[0.08em] text-[#5ED6E3] focus:outline-none placeholder-[#454C61]"
+                className="w-full bg-transparent font-mono text-[14px] tracking-[0.08em] text-[#5ED6E3] focus:outline-none placeholder-[#6E7891]"
               />
             </div>
 
             {isJoin && (
               <>
-                <label className="mt-6 block text-[10px] tracking-[0.3em] text-[#5A6379]">JOIN CODE</label>
+                <label className="mt-6 block text-[10px] tracking-[0.3em] text-[#C6CCDA] font-medium">JOIN CODE</label>
                 <div className="mt-2 border border-[#1E2536] bg-black/40 px-4 py-3 focus-within:border-[#5ED6E3]/60">
                   <input
                     id="team-join-code"
@@ -88,7 +88,7 @@ export const TeamGate: React.FC = () => {
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                     placeholder="6 CHARACTERS"
                     maxLength={6}
-                    className="w-full bg-transparent font-mono text-[14px] tracking-[0.35em] text-[#D5DBE7] focus:outline-none placeholder-[#454C61]"
+                    className="w-full bg-transparent font-mono text-[14px] tracking-[0.35em] text-[#D5DBE7] focus:outline-none placeholder-[#6E7891]"
                   />
                 </div>
               </>
@@ -110,7 +110,7 @@ export const TeamGate: React.FC = () => {
 
         <button
           onClick={logout}
-          className="mt-4 text-[10px] tracking-[0.25em] text-[#5A6379] hover:text-[#E84D7E] cursor-pointer"
+          className="mt-4 text-[10px] tracking-[0.25em] text-[#E84D7E] hover:text-[#FF6B9B] font-bold cursor-pointer transition-colors"
         >
           [ SIGN OUT ]
         </button>

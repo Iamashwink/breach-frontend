@@ -81,7 +81,7 @@ export const NodeMap: React.FC = () => {
       <div className="px-4 sm:px-6 pt-0">
         {/* lane keys (focus) + vitals */}
         <div className="flex flex-wrap items-stretch gap-2">
-          <span className="self-center text-[10px] tracking-[0.3em] text-[#5A6379] mr-1">CONFLUENCE</span>
+          <span className="self-center text-[11px] tracking-[0.3em] text-[#5ED6E3] font-bold mr-1">CONFLUENCE</span>
           {(['A', 'B', 'C'] as PathId[]).map((p) => {
             const on = focus === p;
             return (
@@ -90,7 +90,11 @@ export const NodeMap: React.FC = () => {
                 id={`btn-tab-path-${p.toLowerCase()}`}
                 onClick={() => setFocus((f) => (f === p ? null : p))}
                 title={on ? 'Show all lanes' : `Focus lane ${p}`}
-                className={`px-4 py-2.5 border text-[11.5px] font-semibold tracking-[0.18em] transition-colors ${on ? 'bg-[#141A2B] text-[#F2F5FA]' : 'border-[#1E2536] text-[#5A6379] hover:text-[#8B93A9]'}`}
+                className={`px-4 py-2.5 border text-[11.5px] font-semibold tracking-[0.18em] transition-colors cursor-pointer ${
+                  on
+                    ? 'bg-[#141A2B] text-[#F2F5FA] border-[#5ED6E3]/60'
+                    : 'border-[#2B354C] bg-[#0B0E16]/80 text-[#C6CCDA] hover:text-[#F2F5FA] hover:border-[#414E6B]'
+                }`}
                 style={on ? { borderColor: `${LANE[p].c}88`, boxShadow: `inset 0 2px 0 ${LANE[p].c}` } : {}}
               >
                 <span style={{ color: LANE[p].c }}>{LANE[p].glyph}</span> {p}{' '}
@@ -99,19 +103,23 @@ export const NodeMap: React.FC = () => {
             );
           })}
           <div className="flex flex-wrap gap-2 lg:ml-auto text-[11px] tracking-[0.12em]">
-            <span className="px-3 py-2.5 border border-[#1E2536] text-[#5A6379]"><span className="text-[#E0A83E]">★</span> <b className="text-[#F2F5FA]">{teeth}/3</b> FRAGMENTS</span>
-            <span className="px-3 py-2.5 border border-[#1E2536] text-[#5A6379]"><span className="text-[#E84D7E]">●</span> <b className="text-[#F2F5FA]">{Math.round(rewardMultiplier * 100)}%</b> REWARDS</span>
+            <span className="px-3.5 py-2.5 border border-[#2B354C] bg-[#0B0E16]/80 text-[#C6CCDA] flex items-center gap-1.5 font-medium">
+              <span className="text-[#E0A83E] text-[13px]">★</span> <b className="text-[#F2F5FA] font-bold font-mono">{teeth}/3</b> <span className="text-[#A6B2C8] font-semibold tracking-[0.15em]">FRAGMENTS</span>
+            </span>
+            <span className="px-3.5 py-2.5 border border-[#2B354C] bg-[#0B0E16]/80 text-[#C6CCDA] flex items-center gap-1.5 font-medium">
+              <span className="text-[#E84D7E] text-[12px]">●</span> <b className="text-[#F2F5FA] font-bold font-mono">{Math.round(rewardMultiplier * 100)}%</b> <span className="text-[#A6B2C8] font-semibold tracking-[0.15em]">REWARDS</span>
+            </span>
           </div>
         </div>
 
         {/* legend */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[10px] tracking-[0.25em] text-[#5A6379]">
-          <span><span className="text-[#E0A83E]">▽</span> WHO <b className="text-[#8B93A9]">{pathScores.pathA}</b></span>
-          <span><span className="text-[#5ED6E3]">△</span> HOW <b className="text-[#8B93A9]">{pathScores.pathB}</b></span>
-          <span><span className="text-[#E84D7E]">◇</span> WHY <b className="text-[#8B93A9]">{pathScores.pathC}</b></span>
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[10px] tracking-[0.25em] text-[#A6B2C8]">
+          <span><span className="text-[#E0A83E]">▽</span> WHO <b className="text-[#F2F5FA]">{pathScores.pathA}</b></span>
+          <span><span className="text-[#5ED6E3]">△</span> HOW <b className="text-[#F2F5FA]">{pathScores.pathB}</b></span>
+          <span><span className="text-[#E84D7E]">◇</span> WHY <b className="text-[#F2F5FA]">{pathScores.pathC}</b></span>
           <span><span className="text-[#F2F5FA]">●</span> HELD</span>
-          <span><span className="text-[#F2F5FA]">○</span> NEXT</span>
-          <span><span className="text-[#2C3550]">×</span> SEALED</span> 
+          <span><span className="text-[#5ED6E3]">○</span> NEXT</span>
+          <span><span className="text-[#8B93A9] font-bold">×</span> <b className="text-[#C6CCDA]">SEALED</b></span> 
           <span className="ml-auto">PRIED: <b className="text-[#F2F5FA]">{solvedTotal}</b>/{nodeTotal}</span>
         </div>
       </div>
@@ -124,9 +132,9 @@ export const NodeMap: React.FC = () => {
               {/* strata beds */}
               {STRATA.map((s) => (
                 <g key={s.label}>
-                  <rect x="90" y={s.y0} width="890" height={s.y1 - s.y0} fill={s.accent ? '#E84D7E08' : 'transparent'} stroke="#1E2536" strokeWidth="1" strokeDasharray={s.accent ? '' : '2 5'} />
-                  <text x="10" y={s.y0 + 20} fill={s.accent ? '#E84D7E' : '#5A6379'} fontSize="10" letterSpacing="3" fontFamily="IBM Plex Mono">{s.label}</text>
-                  <text x="10" y={s.y0 + 34} fill="#2C3550" fontSize="8" letterSpacing="1" fontFamily="IBM Plex Mono">{s.sub}</text>
+                  <rect x="90" y={s.y0} width="890" height={s.y1 - s.y0} fill={s.accent ? '#E84D7E08' : 'transparent'} stroke="#364158" strokeWidth="1.3" strokeDasharray={s.accent ? '' : '4 4'} />
+                  <text x="10" y={s.y0 + 20} fill={s.accent ? '#E84D7E' : '#5ED6E3'} fontSize="11" fontWeight="bold" letterSpacing="3" fontFamily="IBM Plex Mono">{s.label}</text>
+                  <text x="10" y={s.y0 + 35} fill="#A6B2C8" fontSize="8.5" fontWeight="500" letterSpacing="1.5" fontFamily="IBM Plex Mono">{s.sub}</text>
                 </g>
               ))}
 
@@ -135,14 +143,14 @@ export const NodeMap: React.FC = () => {
                 const nodes = laneChallenges(p).map((c) => ({ x: nodeX(p, c.index), y: nodeY(c.index) }));
                 return (
                   <g key={p} opacity={dimmed(p) ? 0.18 : 1}>
-                    <polyline points={lanePts(nodes)} fill="none" stroke="#2C3550" strokeWidth="5" opacity="0.35" />
-                    <polyline points={lanePts(nodes)} fill="none" stroke={LANE[p].c} strokeWidth="1.6" strokeDasharray="9 7" opacity="0.6" />
+                    <polyline points={lanePts(nodes)} fill="none" stroke="#2C3550" strokeWidth="6" opacity="0.5" />
+                    <polyline points={lanePts(nodes)} fill="none" stroke={LANE[p].c} strokeWidth="2.4" strokeDasharray="8 5" opacity="0.95" />
                     {/* solid weld over held stretches */}
                     {laneChallenges(p).slice(0, -1).map((c, i) => {
                       if (c.status !== 'solved') return null;
                       const a = nodes[i];
                       const b = nodes[i + 1];
-                      return <line key={c.slot} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={LANE[p].c} strokeWidth="2.4" opacity="0.9" />;
+                      return <line key={c.slot} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={LANE[p].c} strokeWidth="2.8" opacity="1" />;
                     })}
                     {/* lane tag */}
                     <text x={LANE[p].lane} y={30} textAnchor="middle" fontSize="10" letterSpacing="2" fill={LANE[p].c} fontFamily="IBM Plex Mono" opacity="0.9">
@@ -189,42 +197,13 @@ export const NodeMap: React.FC = () => {
                           <rect x="6.5" y="-34" width="4.5" height="4.5" transform="rotate(45 6.5 -34)" />
                         </g>
                       )}
-                      <circle r="16" fill={held ? `${LANE[p].c}2E` : '#0B0E16'} stroke={held || nextUp ? (nextUp ? '#F2F5FA' : LANE[p].c) : wasSkipped ? '#E84D7E66' : '#2C3550'} strokeWidth={held || nextUp ? 2 : 1.2} />
-                      <text y="4.5" textAnchor="middle" fontSize="10.5" fontWeight="bold" fill={held || nextUp ? '#F2F5FA' : '#454C61'} fontFamily="IBM Plex Mono">
+                      <circle r="16" fill={held ? `${LANE[p].c}2E` : '#0B0E16'} stroke={held || nextUp ? (nextUp ? '#F2F5FA' : LANE[p].c) : wasSkipped ? '#E84D7E88' : '#455273'} strokeWidth={held || nextUp ? 2 : 1.3} />
+                      <text y="4.5" textAnchor="middle" fontSize="10.5" fontWeight="bold" fill={held || nextUp ? '#F2F5FA' : sealed ? '#8B93A9' : '#C6CCDA'} fontFamily="IBM Plex Mono">
                         {held ? '●' : wasSkipped ? '–' : sealed ? '×' : String(c.index).padStart(2, '0')}
                       </text>
-                      <text y="31" textAnchor="middle" fontSize="8.5" letterSpacing="1" fill={held || nextUp || isSel ? '#8B93A9' : '#3A4358'} fontFamily="IBM Plex Mono">
+                      <text y="31" textAnchor="middle" fontSize="8.5" fontWeight="500" letterSpacing="1" fill={held || nextUp || isSel ? '#F2F5FA' : '#9BA6BC'} fontFamily="IBM Plex Mono">
                         {p}-{String(c.index).padStart(2, '0')}
                       </text>
-                      {isHov && !sealed && (() => {
-                        const starColor = DIFFICULTY_META[c.difficulty].color;
-                        const fills = starFills(c.difficulty);
-                        return (
-                          <g transform="translate(0,-70)">
-                            <rect x="-110" y="-38" width="220" height="76" fill="#0B0E16" stroke={LANE[p].c} />
-                            <text y="-20" textAnchor="middle" fontSize="9" letterSpacing="2" fill="#F2F5FA" fontFamily="IBM Plex Mono">
-                              {c.category.toUpperCase()}
-                            </text>
-                            <text y="-4" textAnchor="middle" fontSize="8.5" letterSpacing="1.5" fill="#8B93A9" fontFamily="IBM Plex Mono">
-                              {(c.title || '').toUpperCase().slice(0, 28)}
-                            </text>
-                            <text y="10" textAnchor="middle" fontSize="8" letterSpacing="1" fill="#5A6379" fontFamily="IBM Plex Mono">
-                              {c.era} · {c.currentPoints} PTS
-                            </text>
-                            <text y="27" textAnchor="middle" fontSize="11" letterSpacing="3" fontFamily="IBM Plex Mono">
-                              {fills.map((f, i) => (
-                                f === 1 ? (
-                                  <tspan key={i} fill={starColor}>★</tspan>
-                                ) : f === 0.5 ? (
-                                  <tspan key={i} fill={starColor} opacity={0.5}>★</tspan>
-                                ) : (
-                                  <tspan key={i} fill="#454C61">☆</tspan>
-                                )
-                              ))}
-                            </text>
-                          </g>
-                        );
-                      })()}
                     </g>
                   );
                 })
@@ -235,7 +214,7 @@ export const NodeMap: React.FC = () => {
                 <circle r="34" fill="#E84D7E14" stroke="#E84D7E" strokeWidth="1.5">
                   <animate attributeName="r" values="32;36;32" dur="4s" repeatCount="indefinite" />
                 </circle>
-                <circle r="24" fill="none" stroke="#E84D7E" strokeWidth="1" strokeDasharray="3 4" opacity="0.7" />
+                <circle r="24" fill="none" stroke="#E84D7E" strokeWidth="1.6" strokeDasharray="4 3" opacity="0.95" />
                 <circle r="4" fill={teeth === 3 ? '#5ED6E3' : '#2C3550'}>
                   {teeth === 3 && <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />}
                 </circle>
@@ -244,15 +223,54 @@ export const NodeMap: React.FC = () => {
                   <text y="4" textAnchor="middle" fontSize="9" letterSpacing="2" fill="#C6CCDA" fontFamily="IBM Plex Mono">ECHO · {teeth}/3 TEETH</text>
                 </g>
               </g>
+
+              {/* Hover popup overlay — rendered last so it sits cleanly on top of all nodes and lane threads */}
+              {hovered && hovered.status !== 'locked' && (() => {
+                const p = hovered.slot[0] as PathId;
+                const x = nodeX(p, hovered.index);
+                const y = nodeY(hovered.index);
+                // For node 1 across all branches (c.index <= 1 or y < 110), flip downwards so it never goes into the header
+                const popupBelow = hovered.index <= 1 || y < 110;
+                const ty = popupBelow ? y + 74 : y - 70;
+                const starColor = DIFFICULTY_META[hovered.difficulty].color;
+                const fills = starFills(hovered.difficulty);
+
+                return (
+                  <g transform={`translate(${x},${ty})`} pointerEvents="none">
+                    <rect x="-112" y="-40" width="224" height="80" fill="#000000" opacity="0.75" rx="2" />
+                    <rect x="-110" y="-38" width="220" height="76" fill="#0B0E16" stroke={LANE[p].c} strokeWidth="1.5" rx="1" />
+                    <text y="-20" textAnchor="middle" fontSize="9" fontWeight="bold" letterSpacing="2" fill="#F2F5FA" fontFamily="IBM Plex Mono">
+                      {hovered.category.toUpperCase()}
+                    </text>
+                    <text y="-4" textAnchor="middle" fontSize="8.5" fontWeight="500" letterSpacing="1.5" fill="#C6CCDA" fontFamily="IBM Plex Mono">
+                      {(hovered.title || '').toUpperCase().slice(0, 28)}
+                    </text>
+                    <text y="11" textAnchor="middle" fontSize="8" letterSpacing="1" fill="#A6B2C8" fontFamily="IBM Plex Mono">
+                      {hovered.era} · {hovered.currentPoints} PTS
+                    </text>
+                    <text y="27" textAnchor="middle" fontSize="11" letterSpacing="3" fontFamily="IBM Plex Mono">
+                      {fills.map((f, i) => (
+                        f === 1 ? (
+                          <tspan key={i} fill={starColor}>★</tspan>
+                        ) : f === 0.5 ? (
+                          <tspan key={i} fill={starColor} opacity={0.5}>★</tspan>
+                        ) : (
+                          <tspan key={i} fill="#454C61">☆</tspan>
+                        )
+                      ))}
+                    </text>
+                  </g>
+                );
+              })()}
             </svg>
           </div>
           {hovered && hovered.status !== 'locked' && (() => {
             const starColor = DIFFICULTY_META[hovered.difficulty].color;
             const fills = starFills(hovered.difficulty);
             return (
-              <div className="max-w-[1060px] mx-auto mt-1 text-[11px] tracking-[0.1em] text-[#5A6379] flex items-center gap-2">
-                <span className="text-[#F2F5FA]">{hovered.category.toUpperCase()}</span>
-                <span className="text-[#8B93A9]">{(hovered.title || '').toUpperCase()}</span>
+              <div className="max-w-[1060px] mx-auto mt-1 text-[11px] tracking-[0.1em] text-[#A6B2C8] flex items-center gap-2">
+                <span className="text-[#F2F5FA] font-medium">{hovered.category.toUpperCase()}</span>
+                <span className="text-[#C6CCDA] font-medium">{(hovered.title || '').toUpperCase()}</span>
                 <span className="tracking-[0.2em]">
                   {fills.map((f, i) => (
                     f === 1 ? (
