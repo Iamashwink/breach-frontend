@@ -89,6 +89,8 @@ export interface PathState {
   skipped: number;
   total: number;
   points: number;
+  isCompleted?: boolean;
+  isLocked?: boolean;
 }
 
 export interface TeamScore {

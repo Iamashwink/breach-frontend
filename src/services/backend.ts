@@ -103,10 +103,17 @@ function hydrate(
  * locked placeholders so the chart still draws ten nodes.
  */
 export function boardChallenges(board: ApiBoard | null): Challenge[] {
-  if (!board?.path) return [];
-  const code = board.path.code;
-  if (!isPathId(code)) return [];
-  return board.challenges.map((c) => hydrate(c, code, board.path!.delivers, board.path!.total));
+  if (!board) return [];
+  const activeCode = board.path?.code;
+
+  return board.challenges.map((c) => {
+    const rawCode = (c as any).pathCode || activeCode;
+    const code: PathId = isPathId(rawCode) ? rawCode : 'A';
+    const pathObj = board.paths.find((p) => p.code === code) ?? board.path;
+    const delivers = pathObj?.delivers ?? 'who';
+    const total = pathObj?.total ?? 10;
+    return hydrate(c, code, delivers, total);
+  });
 }
 
 /**

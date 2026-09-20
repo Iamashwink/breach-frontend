@@ -17,8 +17,13 @@ export const DashboardView: React.FC = () => {
   const [pendingSwitch, setPendingSwitch] = useState<PathId | null>(null);
 
   const activePath = paths.find((p) => p.isActive) ?? null;
+  const activeIsComplete = activePath
+    ? activePath.isCompleted ||
+      (activePath.total > 0 && activePath.solved + activePath.skipped >= activePath.total) ||
+      fragments.includes(activePath.delivers)
+    : false;
   const solvesOnActive = activePath?.solved ?? 0;
-  const switchIsFree = solvesOnActive >= FREE_SWITCH_THRESHOLD;
+  const switchIsFree = activeIsComplete || solvesOnActive >= FREE_SWITCH_THRESHOLD;
 
   const resumeChallenge = resumeSlot
     ? getPathChallenges((resumeSlot[0] as PathId)).find((c) => c.slot === resumeSlot) ?? null
@@ -34,14 +39,23 @@ export const DashboardView: React.FC = () => {
     if (!path) return null;
 
     if (path.isActive) {
-      const complete = path.solved + path.skipped >= path.total && path.total > 0;
-      if (complete) {
+      if (activeIsComplete) {
         return (
-          <div
-            className="mt-3 px-5 py-2.5 text-[12px] font-bold tracking-[0.2em] text-center border"
-            style={{ color: TONE[code], borderColor: `${TONE[code]}55` }}
-          >
-            COMPLETE ✓ {path.solved}/{path.total}
+          <div className="mt-3 flex flex-col gap-2">
+            <div
+              className="px-4 py-2 text-[11px] font-bold tracking-[0.2em] text-center border"
+              style={{ color: TONE[code], borderColor: `${TONE[code]}55` }}
+            >
+              COMPLETE ✓ {path.solved}/{path.total}
+            </div>
+            <button
+              id={`btn-enter-path-${code.toLowerCase()}`}
+              onClick={() => navigateTo('TRAIL', null, code)}
+              className="w-full px-4 py-2 text-[11px] font-bold tracking-[0.2em] text-[#06232A] cursor-pointer"
+              style={{ background: TONE[code] }}
+            >
+              VIEW TRAIL →
+            </button>
           </div>
         );
       }
@@ -57,12 +71,23 @@ export const DashboardView: React.FC = () => {
       );
     }
 
-    // Already run and left. The (team, path) unique constraint means this is
-    // permanent — say so rather than offering a button the server will refuse.
+    // Previously entered path that is not currently active:
+    // It is NOT sealed! It is open and solvable!
     if (path.isAttempted) {
+      const complete = path.isCompleted || (path.total > 0 && path.solved + path.skipped >= path.total);
       return (
-        <div className="mt-3 px-5 py-2.5 border border-[#1E2536] text-[11px] font-bold tracking-[0.2em] text-center text-[#454C61]">
-          CLOSED — ALREADY RUN
+        <div className="mt-3 flex flex-col gap-2">
+          <div className="text-[10px] tracking-[0.2em] text-[#5ED6E3] font-semibold text-center">
+            {complete ? '✓ PATH COMPLETED' : '✦ PREVIOUS PATH · SOLVABLE'}
+          </div>
+          <button
+            id={`btn-enter-path-${code.toLowerCase()}`}
+            onClick={() => navigateTo('TRAIL', null, code)}
+            className="w-full px-4 py-2.5 text-[11px] font-bold tracking-[0.2em] border cursor-pointer hover:bg-white/[0.04] transition-colors"
+            style={{ borderColor: `${TONE[code]}88`, color: TONE[code] }}
+          >
+            PLAY PATH {code} ({path.solved}/{path.total}) →
+          </button>
         </div>
       );
     }
@@ -82,22 +107,42 @@ export const DashboardView: React.FC = () => {
       );
     }
 
+    // Unattempted path while chosenPath exists!
+    if (activeIsComplete) {
+      return (
+        <div className="mt-3 flex flex-col gap-2">
+          <button
+            onClick={() => setPendingSwitch(code)}
+            disabled={busy}
+            className="w-full px-4 py-2.5 text-[11px] font-bold tracking-[0.2em] cursor-pointer hover:brightness-110 disabled:opacity-40 text-[#06232A]"
+            style={{ background: TONE[code] }}
+          >
+            CHOOSE PATH {code} — FREE (0 PTS)
+          </button>
+          <button
+            onClick={() => navigateTo('TRAIL', null, code)}
+            className="text-[10px] tracking-[0.2em] text-center text-[#5A6379] hover:text-[#8B93A9] cursor-pointer"
+          >
+            PREVIEW TRAIL →
+          </button>
+        </div>
+      );
+    }
+
+    // Active path is in progress (NOT completed yet).
+    // The other path is locked for free switch, but can be switched in-between for a penalty.
     return (
-      <div className="mt-3">
+      <div className="mt-3 flex flex-col gap-1.5">
         <button
           onClick={() => setPendingSwitch(code)}
           disabled={busy}
-          className="w-full px-5 py-2.5 border text-[11px] font-bold tracking-[0.2em] cursor-pointer hover:bg-white/[0.03] disabled:opacity-40"
-          style={{ borderColor: `${TONE[code]}66`, color: TONE[code] }}
+          className="w-full px-4 py-2 border text-[10.5px] font-bold tracking-[0.15em] cursor-pointer hover:bg-[#E84D7E]/10 disabled:opacity-40 text-[#E84D7E] border-[#E84D7E]/50"
         >
-          {switchIsFree ? `SWITCH TO PATH ${code} — FREE` : `SWITCH TO PATH ${code} — 80%`}
+          SWITCH IN-BETWEEN (80%)
         </button>
-        <button
-          onClick={() => navigateTo('TRAIL', null, code)}
-          className="mt-2 w-full text-[10.5px] tracking-[0.2em] text-[#5A6379] hover:text-[#8B93A9] cursor-pointer"
-        >
-          VIEW TRAIL (READ-ONLY) →
-        </button>
+        <div className="text-[9px] text-center text-[#5A6379] tracking-wider">
+          🔒 LOCKED FOR FREE (FINISH PATH {chosenPath} FIRST)
+        </div>
       </div>
     );
   };
@@ -106,6 +151,22 @@ export const DashboardView: React.FC = () => {
     <div className="flex-1 bg-[#07090F] scan-faint">
       <div className="max-w-5xl mx-auto px-5 sm:px-8 py-10">
         <WelcomeGate />
+
+        {activePath && activeIsComplete && (
+          <div className="mb-4 border border-[#5ED6E3]/60 bg-[#5ED6E3]/[0.08] px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[0_0_25px_rgba(94,214,227,0.12)]">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-[#5ED6E3] shadow-[0_0_6px_#5ED6E3]" />
+                <span className="text-[11px] font-bold tracking-[0.25em] text-[#5ED6E3]">
+                  PATH {activePath.code} COMPLETE · FRAGMENT SECURED
+                </span>
+              </div>
+              <div className="mt-1 text-[12px] text-[#C6CCDA]">
+                Choose your next path for <b className="text-[#5ED6E3]">FREE (0 points deducted · 100% rewards)</b>. Previous paths remain available to solve.
+              </div>
+            </div>
+          </div>
+        )}
 
         {activePath && rewardMultiplier < 1 && (
           <div className="mb-3 border border-[#E84D7E]/40 bg-[#E84D7E]/[0.05] px-5 py-3 text-[12px] tracking-[0.1em] text-[#E84D7E]">
@@ -184,28 +245,31 @@ export const DashboardView: React.FC = () => {
       </div>
 
       {pendingSwitch && (
-        <DashboardOverlay title="SWITCH PATH" onClose={() => setPendingSwitch(null)}>
+        <DashboardOverlay title={switchIsFree ? "CHOOSE NEXT PATH (FREE)" : "IN-BETWEEN PATH SWITCH"} onClose={() => setPendingSwitch(null)}>
           <p className="font-lore italic text-[19px] leading-relaxed text-[#F2F5FA]">
-            “Leave Path {chosenPath} for Path {pendingSwitch}?”
+            {switchIsFree
+              ? `“Path ${chosenPath} is complete! Enter Path ${pendingSwitch}?”`
+              : `“Leave Path ${chosenPath} in-between for Path ${pendingSwitch}?”`}
           </p>
           <p className="mt-3 text-[13px] leading-relaxed text-[#9AA2B5]">
             {switchIsFree ? (
               <>
-                You have <b className="text-[#5ED6E3]">{solvesOnActive}</b> solves on Path {chosenPath} —
-                at {FREE_SWITCH_THRESHOLD} or more the switch is free and Path {pendingSwitch} pays
-                full rewards.
+                Path <b className="text-[#5ED6E3]">{chosenPath}</b> has been completed!
+                Switching to Path <b className="text-[#5ED6E3]">{pendingSwitch}</b> is{' '}
+                <b className="text-[#5ED6E3]">FREE of points</b> (0 points deducted) and pays{' '}
+                <b className="text-[#5ED6E3]">100% full rewards</b>.
               </>
             ) : (
               <>
-                You have <b className="text-[#E84D7E]">{solvesOnActive}</b> of {FREE_SWITCH_THRESHOLD}{' '}
-                solves needed for a free switch. Leaving now means Path {pendingSwitch} pays{' '}
-                <b className="text-[#E84D7E]">80%</b> for its whole run.
+                You have not completed Path <b className="text-[#E84D7E]">{chosenPath}</b> yet.
+                Switching in-between costs points penalty: Path <b className="text-[#E84D7E]">{pendingSwitch}</b> will pay{' '}
+                <b className="text-[#E84D7E]">80% rewards</b> for its whole run. Complete Path {chosenPath} to unlock Path {pendingSwitch} for FREE!
               </>
             )}
           </p>
           <p className="mt-3 text-[12px] leading-relaxed text-[#5A6379]">
-            Points already banked on Path {chosenPath} are kept. Path {chosenPath} closes permanently —
-            a path can only be run once.
+            Points already banked are preserved. Challenges on previous paths remain{' '}
+            <b className="text-[#8B93A9]">UNLOCKED and AVAILABLE TO SOLVE</b> at any time.
           </p>
           <div className="mt-6 flex items-center justify-between">
             <button
@@ -218,9 +282,11 @@ export const DashboardView: React.FC = () => {
               id="btn-confirm-switch"
               onClick={() => { void switchPath(pendingSwitch); setPendingSwitch(null); }}
               disabled={busy}
-              className="px-6 py-2.5 bg-[#E84D7E] hover:brightness-110 disabled:opacity-40 text-[#07090F] text-[12px] font-bold tracking-[0.2em] cursor-pointer"
+              className={`px-6 py-2.5 text-[#07090F] text-[12px] font-bold tracking-[0.2em] cursor-pointer ${
+                switchIsFree ? 'bg-[#5ED6E3] hover:brightness-110' : 'bg-[#E84D7E] hover:brightness-110'
+              }`}
             >
-              SWITCH TO PATH {pendingSwitch} →
+              {switchIsFree ? `ENTER PATH ${pendingSwitch} (FREE) →` : `SWITCH IN-BETWEEN (80%) →`}
             </button>
           </div>
         </DashboardOverlay>

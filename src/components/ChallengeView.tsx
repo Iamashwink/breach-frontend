@@ -9,7 +9,7 @@ export const ChallengeView: React.FC = () => {
   const {
     activeChallenge, navigateTo, submitFlag, skipChallenge, openBriefing,
     getPathChallenges, skips, rewardMultiplier, loadHints, unlockHint, busy,
-    currentUser, event, notify, refresh,
+    currentUser, event, notify, refresh, paths,
   } = useGame();
 
   const [flag, setFlag] = useState('');
@@ -23,6 +23,8 @@ export const ChallengeView: React.FC = () => {
   const [confirmSkip, setConfirmSkip] = useState(false);
 
   const challengeId = activeChallenge?.id ?? null;
+  const pathObj = activeChallenge ? paths.find((p) => p.code === activeChallenge.pathId) : null;
+  const effectiveMultiplier = pathObj?.rewardMultiplier ? Number(pathObj.rewardMultiplier) : rewardMultiplier;
 
   const refreshHints = useCallback(async () => {
     if (!challengeId) return;
@@ -140,7 +142,7 @@ export const ChallengeView: React.FC = () => {
           {/* The live price, priced by the server. The path multiplier is
               applied on top of it at solve time. */}
           <span className="text-[#F2F5FA]">
-            · {Math.round(activeChallenge.currentPoints * rewardMultiplier)} PTS
+            · {Math.round(activeChallenge.currentPoints * effectiveMultiplier)} PTS
           </span>
           {activeChallenge.currentPoints < activeChallenge.points && (
             <span className="text-[#454C61]">
@@ -151,8 +153,8 @@ export const ChallengeView: React.FC = () => {
           {activeChallenge.solves === 0 && (
             <span className="text-[#E0A83E]">· UNSOLVED — FIRST BLOOD</span>
           )}
-          {rewardMultiplier < 1 && (
-            <span className="text-[#E84D7E]">· ×{rewardMultiplier.toFixed(2)} PATH PENALTY</span>
+          {effectiveMultiplier < 1 && (
+            <span className="text-[#E84D7E]">· ×{effectiveMultiplier.toFixed(2)} PATH PENALTY</span>
           )}
           {activeChallenge.maxAttempts !== null && (
             <span className="text-[#E0A83E]">· MAX {activeChallenge.maxAttempts} ATTEMPTS</span>
@@ -420,7 +422,7 @@ export const ChallengeView: React.FC = () => {
             challengeId={activeChallenge.id}
             challengeSlot={activeChallenge.slot}
             points={activeChallenge.points}
-            description={activeChallenge.description}
+            description={activeChallenge.objective}
             onClose={() => setShowAdminEdit(false)}
             onDone={async () => {
               setShowAdminEdit(false);

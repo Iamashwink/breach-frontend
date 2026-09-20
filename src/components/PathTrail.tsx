@@ -22,10 +22,12 @@ const NODE_Y = [470, 360, 245, 165, 285, 460, 315, 190, 315, 455];
  * game, and spoiling the next three names would give it away.
  */
 export const PathTrail: React.FC = () => {
-  const { activePath, navigateTo, openBriefing, getPathChallenges, isPathLocked, notify } = useGame();
+  const { activePath, navigateTo, openBriefing, getPathChallenges, isPathLocked, paths, chosenPath, notify } = useGame();
 
   const color = TONE[activePath];
   const nodes = getPathChallenges(activePath);
+  const pathObj = paths.find((p) => p.code === activePath);
+  const isEnteredPrevious = !!pathObj?.isAttempted && pathObj.code !== chosenPath;
   const locked = isPathLocked(activePath);
   const next = nodes.find((c) => c.status === 'open');
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -36,8 +38,7 @@ export const PathTrail: React.FC = () => {
 
   /**
    * Only a node the server actually served has content to open. A node with no
-   * id is either sealed or closed on a path the team has left — say which
-   * rather than opening an empty briefing.
+   * id is either sealed or closed.
    */
   const onSealClick = (node: { slot: string; id: string; status: string }) => {
     if (node.id) {
@@ -47,24 +48,40 @@ export const PathTrail: React.FC = () => {
     if (node.status === 'solved' || node.status === 'skipped') {
       notify(
         'info',
-        `${node.slot} CLOSED`,
-        'Your team closed this on a path it has since left. The points are kept; the node is not replayable.',
+        `${node.slot} COMPLETED`,
+        'Your team has already closed this challenge.',
       );
       return;
     }
     if (locked) {
       notify(
         'error',
-        `PATH ${activePath} SEALED`,
-        'This trail is view-only. Your team is on another path — switch from the dashboard to play it.',
+        `PATH ${activePath} LOCKED`,
+        'Complete your current path to unlock this path for free, or switch from the dashboard.',
       );
       return;
     }
-    notify('info', 'NOT YET REVEALED', 'Close the nodes already open to you and this one will surface.');
+    notify('info', 'NOT YET REVEALED', 'Solve the nodes already open on this path to surface this one.');
   };
 
   return (
     <div className="flex-1 w-full h-full bg-[#07090F] scan-faint m-0 p-0 flex flex-col">
+      {isEnteredPrevious && (
+        <div className="bg-[#141A2B] border-b border-[#5ED6E3]/40 px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+          <div className="flex items-center gap-2">
+            <span className="text-[#5ED6E3] font-bold">✦ PREVIOUS PATH (AVAILABLE TO SOLVE)</span>
+            <span className="text-[#8B93A9]">· Challenges here can still be decoded and scored</span>
+          </div>
+          {chosenPath && (
+            <button
+              onClick={() => navigateTo('TRAIL', null, chosenPath)}
+              className="text-[10px] text-[#5ED6E3] hover:underline cursor-pointer"
+            >
+              ACTIVE PATH: PATH {chosenPath} →
+            </button>
+          )}
+        </div>
+      )}
       <div className="w-full flex-1 m-0 p-0">
         <div className="border-x-0 border-t-0 border-b border-[#1E2536] bg-[#0B0E16]/40 m-0">
           <svg viewBox="0 0 1200 620" className="w-full h-auto select-none">

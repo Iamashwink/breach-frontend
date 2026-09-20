@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Lock, Unlock } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { DashboardOverlay } from './DashboardOverlay';
 import { PathId, ViewType } from '../types';
@@ -12,6 +13,57 @@ const NAV: { label: string; view: ViewType; pathId?: PathId }[] = [
   { label: 'PATH C', view: 'TRAIL', pathId: 'C' },
   { label: 'LEADERBOARD', view: 'BOARD' },
 ];
+
+interface PathLockStatusProps {
+  pathId: PathId;
+  active: boolean;
+  isMobile?: boolean;
+}
+
+const PathLockStatus: React.FC<PathLockStatusProps> = ({ pathId, active, isMobile = false }) => {
+  const { isPathLocked, isPathComplete } = useGame();
+  const locked = isPathLocked(pathId);
+  const complete = isPathComplete(pathId);
+
+  if (locked) {
+    return (
+      <span
+        title={`Path ${pathId}: Locked`}
+        className={`inline-flex items-center justify-center transition-all ${
+          isMobile
+            ? 'text-[#5A6379]'
+            : 'w-5 h-5 rounded-[2px] bg-[#07090F] border border-[#1E2536] text-[#5A6379] group-hover:border-[#2B3347] group-hover:text-[#8B93A9]'
+        }`}
+      >
+        <Lock size={isMobile ? 11 : 12} strokeWidth={2.2} />
+      </span>
+    );
+  }
+
+  // Unlocked path
+  return (
+    <span
+      title={`Path ${pathId}: Unlocked${active ? ' · Active' : ''}${complete ? ' · Cleared' : ''}`}
+      className={`inline-flex items-center justify-center transition-all ${
+        isMobile
+          ? active
+            ? 'text-[#5ED6E3]'
+            : complete
+            ? 'text-[#E0A83E]'
+            : 'text-[#8B93A9]'
+          : `w-5 h-5 rounded-[2px] ${
+              active
+                ? 'bg-[#5ED6E3]/10 border border-[#5ED6E3]/60 text-[#5ED6E3] shadow-[0_0_8px_rgba(94,214,227,0.3)]'
+                : complete
+                ? 'bg-[#E0A83E]/10 border border-[#E0A83E]/50 text-[#E0A83E] shadow-[0_0_8px_rgba(224,168,62,0.25)]'
+                : 'bg-[#07090F] border border-[#1E2536] text-[#8B93A9] group-hover:border-[#2B3347] group-hover:text-[#D5DBE7]'
+            }`
+      }`}
+    >
+      <Unlock size={isMobile ? 11 : 12} strokeWidth={2.2} />
+    </span>
+  );
+};
 
 /**
  * Countdown to the end of the active Time Glitch.
@@ -45,14 +97,6 @@ export const Header: React.FC = () => {
 
   const go = (view: ViewType, pathId?: PathId) => navigateTo(view, null, pathId);
 
-  // Status mark per path entry: ● active · ✓ complete · ■ sealed
-  const pathMark = (pathId?: PathId) => {
-    if (!pathId) return '';
-    if (isPathComplete(pathId)) return ' ✓';
-    if (pathId === chosenPath) return ' ●';
-    if (isPathLocked(pathId)) return ' ■';
-    return '';
-  };
   const isOn = (view: ViewType, pathId?: PathId) =>
     view === 'TRAIL' ? currentView === 'TRAIL' && activePath === pathId : currentView === view;
 
@@ -77,8 +121,9 @@ export const Header: React.FC = () => {
       <div className="lg:hidden border-b border-[#1E2536] bg-[#07090F] px-4 py-2 flex gap-4 overflow-x-auto">
         {NAV.map((n) => (
           <button key={`${n.view}-${n.pathId || ''}`} id={`nav-btn-${n.view.toLowerCase()}${n.pathId ? `-${n.pathId.toLowerCase()}` : ''}`} onClick={() => go(n.view, n.pathId)}
-            className={`text-[11px] tracking-[0.15em] py-1 whitespace-nowrap cursor-pointer ${isOn(n.view, n.pathId) ? 'text-[#5ED6E3]' : 'text-[#5A6379]'}`}>
-            {n.label}{pathMark(n.pathId)}
+            className={`text-[11px] tracking-[0.15em] py-1 whitespace-nowrap cursor-pointer inline-flex items-center gap-1.5 ${isOn(n.view, n.pathId) ? 'text-[#5ED6E3]' : 'text-[#5A6379]'}`}>
+            <span>{n.label}</span>
+            {n.pathId && <PathLockStatus pathId={n.pathId} active={n.pathId === chosenPath} isMobile />}
           </button>
         ))}
         {currentUser?.isAdmin && (
@@ -113,9 +158,10 @@ export const Header: React.FC = () => {
             return (
               <button key={`${n.view}-${n.pathId || ''}`} id={`nav-btn-${n.view.toLowerCase()}${n.pathId ? `-${n.pathId.toLowerCase()}` : ''}`}
                 onClick={() => go(n.view, n.pathId)}
-                className={`w-full flex items-center px-5 py-[9px] font-display text-[13.5px] tracking-[0.18em] transition-colors cursor-pointer ${on ? 'text-[#5ED6E3] bg-[#5ED6E3]/[0.06]' : 'text-[#8B93A9] hover:text-[#D5DBE7]'}`}
+                className={`w-full flex items-center justify-between px-5 py-[9px] font-display text-[13.5px] tracking-[0.18em] transition-colors cursor-pointer group ${on ? 'text-[#5ED6E3] bg-[#5ED6E3]/[0.06]' : 'text-[#8B93A9] hover:text-[#D5DBE7]'}`}
                 style={on ? { boxShadow: 'inset 2px 0 0 #5ED6E3' } : {}}>
-                <span>{n.label}{pathMark(n.pathId)}</span>
+                <span>{n.label}</span>
+                {n.pathId && <PathLockStatus pathId={n.pathId} active={n.pathId === chosenPath} />}
               </button>
             );
           })}

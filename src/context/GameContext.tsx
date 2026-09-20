@@ -159,6 +159,8 @@ interface GameContextType {
   convergence: StandaloneChallenge | null;
   isPathComplete: (path: PathId) => boolean;
   isPathLocked: (path: PathId) => boolean;
+  pathCompletionPrompt: { pathCode: PathId; fragment: string } | null;
+  closeCompletionPrompt: () => void;
   resumeSlot: string | null;
   formattedTimer: string;
   glitchEndsAt: number | null;
@@ -246,6 +248,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [showBriefingModal, setShowBriefingModal] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
   const [storyOpen, setStoryOpen] = useState(false);
+  const [pathCompletionPrompt, setPathCompletionPrompt] = useState<{ pathCode: PathId; fragment: string } | null>(null);
+  const closeCompletionPrompt = useCallback(() => setPathCompletionPrompt(null), []);
   const [now, setNow] = useState(() => Date.now());
   const [audioEnabled, setAudioEnabled] = useState<boolean>(() => {
     try {
@@ -457,6 +461,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ------------------------------------------------------- derived state ----
 
   const paths = useMemo(() => pathStates(board), [board]);
+  const fragments = useMemo(() => board?.fragments ?? [], [board]);
   const chosenPath = useMemo<PathId | null>(() => {
     const code = board?.path?.code;
     return code && isPathId(code) ? code : null;
@@ -523,22 +528,36 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isPathComplete = useCallback(
     (path: PathId) => {
       const p = paths.find((x) => x.code === path);
-      return !!p && p.total > 0 && p.solved + p.skipped >= p.total;
+      if (!p) return false;
+      if (p.isCompleted) return true;
+      if (fragments.includes(p.delivers)) return true;
+      return p.total > 0 && p.solved + p.skipped >= p.total;
     },
-    [paths],
+    [paths, fragments],
   );
 
   /**
-   * A path is locked when the team is not on it. The server decides entry:
-   * an unattempted path is switchable-to, an attempted one is closed forever.
+   * Path lock rules:
+   * 1. Any entered path (isActive or isAttempted) is NEVER locked — challenges remain available to solve.
+   * 2. If team is on an active path that is completed, unattempted paths unlock for free selection.
+   * 3. If active path is NOT complete, unattempted paths are locked from free switch (can switch in-between with penalty).
    */
   const isPathLocked = useCallback(
     (path: PathId) => {
       const p = paths.find((x) => x.code === path);
       if (!p) return true;
-      return !p.isActive;
+      if (p.isActive || p.isAttempted) return false;
+      if (p.isLocked !== undefined) return p.isLocked;
+      if (!chosenPath) return false;
+      const activeP = paths.find((x) => x.code === chosenPath);
+      const activeDone =
+        activeP?.isCompleted ||
+        (activeP && fragments.includes(activeP.delivers)) ||
+        (activeP ? activeP.total > 0 && activeP.solved + activeP.skipped >= activeP.total : false);
+      if (activeDone) return false;
+      return true;
     },
-    [paths],
+    [paths, chosenPath, fragments],
   );
 
   /** The next open node on the active path. */
@@ -940,6 +959,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             'FRAGMENT SECURED',
             `${result.fragment.toUpperCase()} is yours. Carry it to the Convergence Terminal.`,
           );
+          const solvedPathCode = (challenge?.pathId ?? chosenPath ?? 'A') as PathId;
+          setPathCompletionPrompt({ pathCode: solvedPathCode, fragment: result.fragment });
         }
 
         await refresh();
@@ -1071,11 +1092,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getPathPoints,
     skips: board?.skips ?? { used: 0, remaining: 0, quota: 0 },
     rewardMultiplier,
-    fragments: board?.fragments ?? [],
+    fragments,
     welcome: welcomeChallenge(board),
     convergence: convergenceChallenge(board),
     isPathComplete,
     isPathLocked,
+    pathCompletionPrompt,
+    closeCompletionPrompt,
     resumeSlot,
     formattedTimer,
     glitchEndsAt,

@@ -18,6 +18,7 @@ import { ChallengeView } from './components/ChallengeView';
 import { ConvergenceTerminal } from './components/ConvergenceTerminal';
 import { LeaderboardView } from './components/LeaderboardView';
 import { BriefingModal } from './components/BriefingModal';
+import { PathCompletionModal } from './components/PathCompletionModal';
 import { MainStoryModal } from './components/MainStoryModal';
 import { StoryNarrationModal } from './components/StoryNarrationModal';
 import { TourModal } from './components/TourModal';
@@ -178,6 +179,7 @@ const AppContent: React.FC = () => {
         <main className="flex-1 flex flex-col">{renderCurrentView()}</main>
       </div>
       <BriefingModal />
+      <PathCompletionModal />
       <MainStoryModal />
       <StoryNarrationModal />
       <TourModal />

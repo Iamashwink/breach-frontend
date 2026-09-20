@@ -67,8 +67,8 @@ export const NodeMap: React.FC = () => {
         'info',
         c.status === 'locked' ? 'NOT YET REVEALED' : `${c.slot} CLOSED`,
         c.status === 'locked'
-          ? 'Close the nodes already open to your team and this one will surface.'
-          : 'Closed on a path your team has left. The points are kept; the node is not replayable.',
+          ? 'Solve the open nodes on this path to surface this one.'
+          : 'Already completed by your team.',
       );
       return;
     }

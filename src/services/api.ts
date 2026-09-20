@@ -134,6 +134,7 @@ export interface AuthUser {
   id: string;
   username: string;
   isAdmin: boolean;
+  displayName?: string;
 }
 
 export interface AuthResponse {
@@ -172,6 +173,8 @@ export type ChallengeStatus = 'solved' | 'skipped' | 'open';
 
 export interface ApiBoardChallenge {
   id: string;
+  pathId?: string;
+  pathCode?: string;
   title: string;
   description: string;
   categoryId: number;
@@ -224,6 +227,9 @@ export interface ApiBoardPath {
   isActive: boolean;
   isAttempted: boolean;
   isAvailable: boolean;
+  isCompleted?: boolean;
+  isLocked?: boolean;
+  canSwitchFree?: boolean;
   rewardMultiplier: string | null;
   entryReason: string | null;
   solved: number;
@@ -242,6 +248,7 @@ export interface ApiActivePath {
   entryReason: string;
   solved: number;
   total: number;
+  isCompleted?: boolean;
 }
 
 export interface ApiTimeGlitch {
