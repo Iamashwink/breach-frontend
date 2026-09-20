@@ -24,9 +24,32 @@ import { TourModal } from './components/TourModal';
 import { ToastBanner } from './components/ToastBanner';
 import { TimeGlitch } from './components/TimeGlitch';
 
-const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="min-h-screen bg-[#07090F] font-mono">{children}</div>
-);
+import { AdminTeams } from './components/admin/AdminTeams';
+import { AdminActivity } from './components/admin/AdminActivity';
+
+const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser, navigateTo } = useGame();
+  return (
+    <div className="min-h-screen bg-[#07090F] font-mono">
+      {currentUser?.isAdmin && (
+        <div className="sticky top-0 z-50 bg-[#0E1220] border-b border-[#E0A83E]/50 px-4 py-2 flex items-center justify-between text-[11px] font-mono">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-[#E0A83E] shadow-[0_0_6px_#E0A83E]" />
+            <span className="text-[#E0A83E] font-bold tracking-widest">ADMIN PRIVILEGES ACTIVE</span>
+            <span className="text-[#5A6379]">({currentUser.username})</span>
+          </div>
+          <button
+            onClick={() => navigateTo('ADMIN')}
+            className="px-3 py-1 bg-[#E0A83E] text-[#06232A] font-bold tracking-widest text-[10px] hover:brightness-110 cursor-pointer"
+          >
+            ENTER ADMIN CONSOLE →
+          </button>
+        </div>
+      )}
+      {children}
+    </div>
+  );
+};
 
 const BootScreen: React.FC<{ title: string; detail?: string; onRetry?: () => void }> = ({
   title,
@@ -101,6 +124,8 @@ const AppContent: React.FC = () => {
         case 'ADMIN_EVENTS': return <AdminEvents />;
         case 'ADMIN_CHALLENGES': return <AdminChallenges />;
         case 'ADMIN_GLITCHES': return <AdminGlitches />;
+        case 'ADMIN_TEAMS': return <AdminTeams />;
+        case 'ADMIN_ACTIVITY': return <AdminActivity />;
         default: return <AdminDashboard />;
       }
     };

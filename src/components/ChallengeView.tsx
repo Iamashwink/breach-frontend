@@ -3,11 +3,13 @@ import { useGame } from '../context/GameContext';
 import { DIFFICULTY_META } from '../services/backend';
 import { TONE } from '../data/pathsData';
 import { Hint } from '../types';
+import { api } from '../services/api';
 
 export const ChallengeView: React.FC = () => {
   const {
     activeChallenge, navigateTo, submitFlag, skipChallenge, openBriefing,
     getPathChallenges, skips, rewardMultiplier, loadHints, unlockHint, busy,
+    currentUser, event, notify, refresh,
   } = useGame();
 
   const [flag, setFlag] = useState('');
@@ -17,6 +19,7 @@ export const ChallengeView: React.FC = () => {
   });
   const [hints, setHints] = useState<Hint[] | null>(null);
   const [showHints, setShowHints] = useState(false);
+  const [showAdminEdit, setShowAdminEdit] = useState(false);
   const [confirmSkip, setConfirmSkip] = useState(false);
 
   const challengeId = activeChallenge?.id ?? null;
@@ -106,7 +109,15 @@ export const ChallengeView: React.FC = () => {
           >
             ← CHART
           </button>
-          <span className="flex gap-4">
+          <span className="flex items-center gap-4">
+            {currentUser?.isAdmin && (
+              <button
+                onClick={() => setShowAdminEdit(true)}
+                className="px-2.5 py-0.5 border border-[#5ED6E3]/50 text-[#5ED6E3] hover:bg-[#5ED6E3]/10 text-[10px] font-mono tracking-wider cursor-pointer transition-colors"
+              >
+                ⚡ EDIT CHALLENGE
+              </button>
+            )}
             <button onClick={() => prev && navigateTo('CHALLENGE', prev.slot)} disabled={!prev} className="disabled:opacity-30 cursor-pointer">←</button>
             <button onClick={() => next && navigateTo('CHALLENGE', next.slot)} disabled={!next} className="disabled:opacity-30 cursor-pointer">→</button>
           </span>
@@ -208,44 +219,72 @@ export const ChallengeView: React.FC = () => {
           </div>
         )}
 
-        {/* Hints: priced in points and deducted from the team's score on unlock. */}
-        <div className="mt-12 border-t border-[#1E2536] pt-8 max-w-4xl">
+        {/* Hints: Opens as a modal popup dialog directly on top of the page */}
+        <div className="mt-8 border-t border-[#1E2536] pt-6 max-w-4xl flex items-center justify-between">
           <button
-            onClick={() => setShowHints((s) => !s)}
-            className="text-[10px] font-semibold tracking-[0.3em] text-[#5A6379] hover:text-[#8B93A9] cursor-pointer"
+            type="button"
+            onClick={() => {
+              setShowHints(true);
+              if (hints === null) void refreshHints();
+            }}
+            className="px-3.5 py-2 border border-[#E0A83E]/40 bg-[#E0A83E]/5 text-[11px] font-semibold tracking-[0.2em] text-[#E0A83E] hover:bg-[#E0A83E]/15 cursor-pointer flex items-center gap-2 transition-colors"
           >
-            {showHints ? '▾' : '▸'} HINTS — PAID IN POINTS
+            <span>💡</span> HINTS & INTEL ({hints ? hints.length : '…'})
           </button>
-          {showHints && (
-            <div className="mt-4 space-y-3">
-              {hints === null && <div className="text-[12px] text-[#454C61]">Reading hint index…</div>}
-              {hints?.length === 0 && (
-                <div className="text-[12px] text-[#454C61]">No hints published for this challenge.</div>
-              )}
-              {hints?.map((hint, idx) => (
-                <div key={hint.id} className="border border-[#1E2536] bg-[#0B0E16]/60 px-4 py-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-[11px] tracking-[0.2em] text-[#5A6379]">
-                      HINT {idx + 1} · {hint.cost} PTS
-                    </span>
-                    {!hint.isUnlocked && (
-                      <button
-                        onClick={() => buyHint(hint)}
-                        disabled={busy}
-                        className="text-[11px] font-semibold tracking-[0.15em] text-[#E0A83E] hover:brightness-125 disabled:opacity-40 cursor-pointer"
-                      >
-                        DECRYPT −{hint.cost} PTS →
-                      </button>
+        </div>
+
+        {/* Modal Popup for Hints on top of ChallengeView */}
+        {showHints && (
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
+            onClick={() => setShowHints(false)}
+          >
+            <div
+              className="max-w-lg w-full max-h-[85vh] overflow-y-auto border border-[#E0A83E]/60 bg-[#0B0E16] p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-[#1E2536]">
+                <div className="text-[11px] tracking-[0.25em] text-[#E0A83E] font-bold font-display">
+                  INTELLIGENCE HINTS // {activeChallenge.title}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowHints(false)}
+                  className="text-[12px] text-[#5A6379] hover:text-[#F2F5FA] px-2 py-1 cursor-pointer font-mono"
+                >
+                  ESC / CLOSE ×
+                </button>
+              </div>
+              <div className="mt-4 space-y-3">
+                {hints === null && <div className="text-[12px] text-[#8B93A9] py-4 text-center">Reading hint telemetry…</div>}
+                {hints?.length === 0 && (
+                  <div className="text-[12px] text-[#8B93A9] py-4 text-center">No hints published for this challenge.</div>
+                )}
+                {hints?.map((hint, idx) => (
+                  <div key={hint.id} className="border border-[#1E2536] bg-[#07090F] p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[11px] tracking-[0.2em] text-[#8B93A9] font-mono">
+                        HINT {idx + 1} · {hint.cost} PTS
+                      </span>
+                      {!hint.isUnlocked && (
+                        <button
+                          onClick={() => buyHint(hint)}
+                          disabled={busy}
+                          className="text-[11px] font-semibold tracking-[0.15em] text-[#E0A83E] hover:brightness-125 disabled:opacity-40 cursor-pointer"
+                        >
+                          DECRYPT −{hint.cost} PTS →
+                        </button>
+                      )}
+                    </div>
+                    {hint.isUnlocked && hint.body && (
+                      <p className="mt-2.5 text-[13px] leading-relaxed text-[#C6CCDA] border-t border-[#1E2536]/40 pt-2">{hint.body}</p>
                     )}
                   </div>
-                  {hint.isUnlocked && hint.body && (
-                    <p className="mt-2 text-[13px] leading-relaxed text-[#C6CCDA]">{hint.body}</p>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <form onSubmit={submit} className="mt-10 max-w-4xl">
           <div
@@ -372,6 +411,140 @@ export const ChallengeView: React.FC = () => {
               )}
             </div>
           )}
+        </form>
+
+        {showAdminEdit && event && (
+          <AdminChallengeModal
+            eventId={event.id}
+            challengeTitle={activeChallenge.title}
+            challengeId={activeChallenge.id}
+            challengeSlot={activeChallenge.slot}
+            points={activeChallenge.points}
+            description={activeChallenge.description}
+            onClose={() => setShowAdminEdit(false)}
+            onDone={async () => {
+              setShowAdminEdit(false);
+              await refresh();
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+const AdminChallengeModal: React.FC<{
+  eventId: string;
+  challengeTitle: string;
+  challengeId: string;
+  challengeSlot: string;
+  points: number;
+  description: string;
+  onClose: () => void;
+  onDone: () => void;
+}> = ({ eventId, challengeTitle, challengeId, challengeSlot, points: initialPoints, description: initialDesc, onClose, onDone }) => {
+  const { notify } = useGame();
+  const [title, setTitle] = useState(challengeTitle);
+  const [description, setDescription] = useState(initialDesc);
+  const [points, setPoints] = useState(String(initialPoints));
+  const [newFlag, setNewFlag] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api.adminPatchChallenge(eventId, challengeId, {
+        title: title.trim() || undefined,
+        description: description.trim() || undefined,
+        initialPoints: Number(points) || undefined,
+        flag: newFlag.trim() || undefined,
+      });
+      notify('success', 'CHALLENGE UPDATED', `"${title}" saved.`);
+      onDone();
+    } catch (err: unknown) {
+      notify('error', 'UPDATE FAILED', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="max-w-xl w-full max-h-[85vh] overflow-y-auto border border-[#5ED6E3]/60 bg-[#0B0E16] p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between pb-3 border-b border-[#1E2536]">
+          <div className="text-[11px] tracking-[0.25em] text-[#5ED6E3] font-bold font-display">
+            ADMIN EDIT CHALLENGE // {challengeSlot}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[12px] text-[#5A6379] hover:text-[#F2F5FA] px-2 py-1 cursor-pointer font-mono"
+          >
+            ESC / CLOSE ×
+          </button>
+        </div>
+        <form onSubmit={submit} className="mt-4 space-y-4">
+          <div>
+            <label className="text-[10px] tracking-[0.2em] text-[#5A6379] block mb-1">TITLE</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full bg-[#07090F] border border-[#1E2536] text-[#F2F5FA] px-3 py-2 text-[12px] font-mono focus:border-[#5ED6E3] outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label className="text-[10px] tracking-[0.2em] text-[#5A6379] block mb-1">DESCRIPTION</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              className="w-full bg-[#07090F] border border-[#1E2536] text-[#F2F5FA] px-3 py-2 text-[12px] font-mono focus:border-[#5ED6E3] outline-none"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] tracking-[0.2em] text-[#5A6379] block mb-1">INITIAL POINTS</label>
+              <input
+                value={points}
+                onChange={(e) => setPoints(e.target.value)}
+                type="number"
+                className="w-full bg-[#07090F] border border-[#1E2536] text-[#F2F5FA] px-3 py-2 text-[12px] font-mono focus:border-[#5ED6E3] outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] tracking-[0.2em] text-[#5A6379] block mb-1">UPDATE FLAG</label>
+              <input
+                value={newFlag}
+                onChange={(e) => setNewFlag(e.target.value)}
+                placeholder="Leave blank to keep"
+                className="w-full bg-[#07090F] border border-[#1E2536] text-[#F2F5FA] px-3 py-2 text-[12px] font-mono focus:border-[#5ED6E3] outline-none"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="submit"
+              disabled={busy}
+              className="px-5 py-2.5 bg-[#5ED6E3] text-[#06232A] text-[11px] font-bold tracking-[0.2em] cursor-pointer hover:brightness-110 disabled:opacity-40"
+            >
+              {busy ? 'SAVING…' : 'SAVE CHANGES →'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 text-[11px] tracking-[0.2em] text-[#5A6379] hover:text-[#D5DBE7] cursor-pointer"
+            >
+              CANCEL
+            </button>
+          </div>
         </form>
       </div>
     </div>

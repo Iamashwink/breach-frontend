@@ -4,7 +4,7 @@ import { api, AdminTimeGlitch } from '../../services/api';
 import { AdminNav } from './AdminNav';
 
 export const AdminGlitches: React.FC = () => {
-  const { event, notify } = useGame();
+  const { adminEvent, notify } = useGame();
   const [glitches, setGlitches] = useState<AdminTimeGlitch[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -12,10 +12,10 @@ export const AdminGlitches: React.FC = () => {
   const [genBusy, setGenBusy] = useState(false);
 
   const load = async () => {
-    if (!event) return;
+    if (!adminEvent) return;
     setLoading(true);
     try {
-      setGlitches(await api.adminListGlitches(event.id));
+      setGlitches(await api.adminListGlitches(adminEvent.id));
     } catch {
       notify('error', 'LOAD FAILED', 'Could not fetch time glitches.');
     } finally {
@@ -23,12 +23,12 @@ export const AdminGlitches: React.FC = () => {
     }
   };
 
-  useEffect(() => { void load(); }, [event]);
+  useEffect(() => { void load(); }, [adminEvent]);
 
   const remove = async (id: string) => {
-    if (!event) return;
+    if (!adminEvent) return;
     try {
-      await api.adminDeleteGlitch(event.id, id);
+      await api.adminDeleteGlitch(adminEvent.id, id);
       notify('success', 'DELETED', 'Time glitch removed.');
       void load();
     } catch (err: unknown) {
@@ -36,11 +36,32 @@ export const AdminGlitches: React.FC = () => {
     }
   };
 
-  const generate = async () => {
-    if (!event) return;
+  const triggerGlitchNow = async (minutes: number, multiplier = 2) => {
+    if (!adminEvent) return;
     setGenBusy(true);
     try {
-      await api.adminGenerateGlitches(event.id, { everyMinutes: Number(genCount) || 30 });
+      const now = new Date();
+      const end = new Date(now.getTime() + minutes * 60 * 1000);
+      await api.adminCreateGlitch(adminEvent.id, {
+        label: `Command Boost (${multiplier}×)`,
+        startsAt: now.toISOString(),
+        endsAt: end.toISOString(),
+        multiplier,
+      });
+      notify('success', 'GLITCH TRIGGERED', `Active glitch window started for ${minutes} minutes.`);
+      void load();
+    } catch (err: unknown) {
+      notify('error', 'TRIGGER FAILED', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setGenBusy(false);
+    }
+  };
+
+  const generate = async () => {
+    if (!adminEvent) return;
+    setGenBusy(true);
+    try {
+      await api.adminGenerateGlitches(adminEvent.id, { everyMinutes: Number(genCount) || 30 });
       notify('success', 'GENERATED', 'Time glitch windows generated.');
       void load();
     } catch (err: unknown) {
@@ -74,7 +95,21 @@ export const AdminGlitches: React.FC = () => {
               {glitches.length} total · {active.length} active · {upcoming.length} upcoming
             </div>
           </div>
-          <div className="flex gap-2 items-end">
+          <div className="flex gap-2 items-end flex-wrap">
+            <button
+              onClick={() => void triggerGlitchNow(15, 2)}
+              disabled={genBusy}
+              className="px-3 py-2 border border-[#5ED6E3]/40 text-[10px] tracking-[0.15em] text-[#5ED6E3] hover:bg-[#5ED6E3]/10 cursor-pointer disabled:opacity-40"
+            >
+              TRIGGER 15m GLITCH (2×)
+            </button>
+            <button
+              onClick={() => void triggerGlitchNow(30, 2)}
+              disabled={genBusy}
+              className="px-3 py-2 border border-[#5ED6E3]/40 text-[10px] tracking-[0.15em] text-[#5ED6E3] hover:bg-[#5ED6E3]/10 cursor-pointer disabled:opacity-40"
+            >
+              TRIGGER 30m GLITCH (2×)
+            </button>
             <div className="flex items-end gap-1">
               <label className="block">
                 <span className="text-[9px] tracking-[0.25em] text-[#5A6379]">EVERY (min)</span>
@@ -88,13 +123,13 @@ export const AdminGlitches: React.FC = () => {
             </div>
             <button onClick={() => setShowCreate(true)}
               className="px-5 py-2 bg-[#5ED6E3] text-[#06232A] text-[11px] font-bold tracking-[0.2em] cursor-pointer hover:brightness-110">
-              + CREATE
+              + CUSTOM GLITCH
             </button>
           </div>
         </div>
 
-        {showCreate && event && (
-          <CreateGlitchForm eventId={event.id} onDone={() => { setShowCreate(false); void load(); }} onCancel={() => setShowCreate(false)} />
+        {showCreate && adminEvent && (
+          <CreateGlitchForm eventId={adminEvent.id} onDone={() => { setShowCreate(false); void load(); }} onCancel={() => setShowCreate(false)} />
         )}
 
         {loading ? (

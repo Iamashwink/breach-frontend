@@ -371,11 +371,14 @@ export interface AdminHint {
   requiresHintId: string | null;
 }
 
+import { AdminEventStats, AdminSubmissionLog, AdminTeamInfo } from '../types';
+
 export interface AdminTimeGlitch {
   id: string;
   label: string | null;
   startsAt: string;
   endsAt: string;
+  multiplier?: string | number;
 }
 
 export interface CreateChallengeBody {
@@ -390,6 +393,7 @@ export interface CreateChallengeBody {
   flag: string;
   maxAttempts?: number;
   author?: string;
+  resourceLink?: string;
 }
 
 export interface PatchChallengeBody {
@@ -405,6 +409,7 @@ export interface PatchChallengeBody {
   state?: 'hidden' | 'visible' | 'locked';
   maxAttempts?: number | null;
   author?: string;
+  resourceLink?: string | null;
 }
 
 // ------------------------------------------------------------ endpoints ----
@@ -461,8 +466,14 @@ export const api = {
   // events
   adminCreateEvent: (body: { name: string; slug?: string; description?: string; startsAt?: string; endsAt?: string }) =>
     post<ApiEvent>('/admin/events', body),
-  adminPatchEvent: (eventId: string, body: { name?: string; description?: string; startsAt?: string | null; endsAt?: string | null; isPublished?: boolean; isFrozen?: boolean }) =>
+  adminPatchEvent: (eventId: string, body: { name?: string; slug?: string; description?: string; startsAt?: string | null; endsAt?: string | null; isPublished?: boolean; isFrozen?: boolean }) =>
     patch<ApiEvent>(`/admin/events/${eventId}`, body),
+  adminDeleteEvent: (eventId: string) =>
+    del<unknown>(`/admin/events/${eventId}`),
+  adminResetEvent: (eventId: string) =>
+    post<unknown>(`/admin/events/${eventId}/reset`, {}),
+  adminGetEventStats: (eventId: string) =>
+    get<AdminEventStats>(`/admin/events/${eventId}/stats`),
 
   // categories
   adminCreateCategory: (name: string) =>
@@ -477,6 +488,8 @@ export const api = {
     post<AdminChallenge>(`/admin/events/${eventId}/challenges`, body),
   adminPatchChallenge: (eventId: string, challengeId: string, body: PatchChallengeBody) =>
     patch<AdminChallenge>(`/admin/events/${eventId}/challenges/${challengeId}`, body),
+  adminDeleteChallenge: (eventId: string, challengeId: string) =>
+    del<unknown>(`/admin/events/${eventId}/challenges/${challengeId}`),
 
   // hints
   adminListHints: (eventId: string, challengeId: string) =>
@@ -489,10 +502,23 @@ export const api = {
   // time glitches
   adminListGlitches: (eventId: string) =>
     get<AdminTimeGlitch[]>(`/admin/events/${eventId}/time-glitches`),
-  adminCreateGlitch: (eventId: string, body: { label?: string; startsAt: string; endsAt: string }) =>
+  adminCreateGlitch: (eventId: string, body: { label?: string; startsAt: string; endsAt: string; multiplier?: number }) =>
     post<AdminTimeGlitch>(`/admin/events/${eventId}/time-glitches`, body),
   adminGenerateGlitches: (eventId: string, body: { everyMinutes?: number; durationMinutes?: number; firstAt?: string }) =>
     post<AdminTimeGlitch[]>(`/admin/events/${eventId}/time-glitches/generate`, body),
   adminDeleteGlitch: (eventId: string, glitchId: string) =>
     del(`/admin/events/${eventId}/time-glitches/${glitchId}`),
+
+  // teams
+  adminListTeams: (eventId: string) =>
+    get<AdminTeamInfo[]>(`/admin/events/${eventId}/teams`),
+  adminPatchTeam: (eventId: string, teamId: string, body: { banned?: boolean; name?: string }) =>
+    patch<AdminTeamInfo>(`/admin/events/${eventId}/teams/${teamId}`, body),
+  adminDeleteTeam: (eventId: string, teamId: string) =>
+    del<unknown>(`/admin/events/${eventId}/teams/${teamId}`),
+
+  // live submissions
+  adminListSubmissions: (eventId: string, limit?: number) =>
+    get<AdminSubmissionLog[]>(`/admin/events/${eventId}/submissions${limit ? `?limit=${limit}` : ''}`),
 };
+

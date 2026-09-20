@@ -7,31 +7,81 @@ const TABS: { label: string; view: ViewType }[] = [
   { label: 'EVENTS', view: 'ADMIN_EVENTS' },
   { label: 'CHALLENGES', view: 'ADMIN_CHALLENGES' },
   { label: 'TIME GLITCHES', view: 'ADMIN_GLITCHES' },
+  { label: 'TEAMS', view: 'ADMIN_TEAMS' },
+  { label: 'LIVE ACTIVITY', view: 'ADMIN_ACTIVITY' },
 ];
 
 export const AdminNav: React.FC = () => {
-  const { currentView, navigateTo } = useGame();
+  const {
+    currentView,
+    navigateTo,
+    currentUser,
+    logout,
+    allEvents,
+    adminEvent,
+    setAdminSelectedEventId,
+  } = useGame();
 
   return (
-    <div className="border-b border-[#1E2536] bg-[#0A0D15] px-6 py-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <button onClick={() => navigateTo('DASHBOARD')} className="text-[10px] tracking-[0.2em] text-[#5A6379] hover:text-[#5ED6E3] cursor-pointer">
-            ← BACK TO CTF
+    <div className="border-b border-[#1E2536] bg-[#0A0D15]">
+      {/* Top Banner */}
+      <div className="px-6 py-3 border-b border-[#1E2536]/60 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 bg-[#E0A83E] shadow-[0_0_8px_#E0A83E]" />
+            <span className="text-[12px] tracking-[0.25em] text-[#E0A83E] font-bold font-display">
+              BREACHPOINT // COMMAND ARCHIVE
+            </span>
+          </div>
+          <span className="text-[#3A4356]">|</span>
+          {/* Event Switcher */}
+          <div className="flex items-center gap-2 text-[11px]">
+            <span className="text-[#5A6379] tracking-[0.15em] text-[10px]">EVENT:</span>
+            <select
+              value={adminEvent?.id ?? ''}
+              onChange={(e) => setAdminSelectedEventId(e.target.value || null)}
+              className="bg-[#0E1220] border border-[#1E2536] px-2.5 py-1 text-[11px] text-[#5ED6E3] outline-none focus:border-[#5ED6E3] cursor-pointer"
+            >
+              {allEvents.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.name} ({ev.isPublished ? 'LIVE' : 'DRAFT'})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* User & Player View Buttons */}
+        <div className="flex items-center gap-4 text-[11px]">
+          <span className="text-[#8B93A9] tracking-[0.1em]">
+            OPERATIVE: <strong className="text-[#F2F5FA]">{currentUser?.username ?? 'ADMIN'}</strong>
+          </span>
+          <button
+            onClick={() => navigateTo('DASHBOARD')}
+            className="px-3 py-1 border border-[#1E2536] text-[10px] tracking-[0.18em] text-[#5ED6E3] hover:bg-[#5ED6E3]/[0.08] cursor-pointer"
+          >
+            PLAY AS OPERATIVE →
           </button>
-          <span className="text-[11px] tracking-[0.3em] text-[#E0A83E] font-semibold">ADMIN CONSOLE</span>
+          <button
+            onClick={logout}
+            className="px-3 py-1 border border-[#E84D7E]/40 text-[10px] tracking-[0.18em] text-[#E84D7E] hover:bg-[#E84D7E]/[0.08] cursor-pointer"
+          >
+            LOGOUT
+          </button>
         </div>
       </div>
-      <div className="mt-3 flex gap-1">
+
+      {/* Navigation Tabs */}
+      <div className="px-6 flex gap-1 overflow-x-auto">
         {TABS.map((t) => {
           const on = currentView === t.view;
           return (
             <button
               key={t.view}
               onClick={() => navigateTo(t.view)}
-              className={`px-4 py-2 text-[11px] tracking-[0.18em] cursor-pointer transition-colors ${
+              className={`px-4 py-2.5 text-[11px] tracking-[0.18em] cursor-pointer transition-colors whitespace-nowrap ${
                 on
-                  ? 'text-[#E0A83E] bg-[#E0A83E]/[0.08] border-b-2 border-[#E0A83E]'
+                  ? 'text-[#E0A83E] bg-[#E0A83E]/[0.08] border-b-2 border-[#E0A83E] font-semibold'
                   : 'text-[#5A6379] hover:text-[#8B93A9]'
               }`}
             >

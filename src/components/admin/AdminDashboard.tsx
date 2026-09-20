@@ -1,112 +1,338 @@
 import React, { useEffect, useState } from 'react';
 import { useGame } from '../../context/GameContext';
 import { api, AdminChallenge, AdminTimeGlitch } from '../../services/api';
+import { AdminEventStats } from '../../types';
 import { AdminNav } from './AdminNav';
 
 export const AdminDashboard: React.FC = () => {
-  const { event, navigateTo, notify } = useGame();
+  const { adminEvent, navigateTo, notify } = useGame();
   const [challenges, setChallenges] = useState<AdminChallenge[]>([]);
   const [glitches, setGlitches] = useState<AdminTimeGlitch[]>([]);
+  const [stats, setStats] = useState<AdminEventStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!event) return;
+  const loadData = async () => {
+    if (!adminEvent) return;
     setLoading(true);
-    Promise.all([
-      api.adminListChallenges(event.id).catch(() => []),
-      api.adminListGlitches(event.id).catch(() => []),
-    ]).then(([c, g]) => {
+    try {
+      const [c, g, s] = await Promise.all([
+        api.adminListChallenges(adminEvent.id).catch(() => []),
+        api.adminListGlitches(adminEvent.id).catch(() => []),
+        api.adminGetEventStats(adminEvent.id).catch(() => null),
+      ]);
       setChallenges(c);
       setGlitches(g);
-    }).finally(() => setLoading(false));
-  }, [event]);
+      setStats(s);
+    } catch {
+      /* non-fatal */
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const visible = challenges.filter((c) => c.state === 'visible').length;
-  const hidden = challenges.filter((c) => c.state === 'hidden').length;
-  const locked = challenges.filter((c) => c.state === 'locked').length;
-  const totalChallenges = challenges.length;
-
-  const now = Date.now();
-  const activeGlitch = glitches.find((g) => new Date(g.startsAt).getTime() <= now && new Date(g.endsAt).getTime() > now);
-  const nextGlitch = glitches
-    .filter((g) => new Date(g.startsAt).getTime() > now)
-    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
+  useEffect(() => {
+    void loadData();
+  }, [adminEvent]);
 
   const togglePublish = async () => {
-    if (!event) return;
+    if (!adminEvent) return;
+    setBusy(true);
     try {
-      await api.adminPatchEvent(event.id, { isPublished: !event.isPublished });
-      notify('success', 'EVENT UPDATED', event.isPublished ? 'Event unpublished.' : 'Event published.');
+      await api.adminPatchEvent(adminEvent.id, { isPublished: !adminEvent.isPublished });
+      notify(
+        'success',
+        'EVENT STATUS UPDATED',
+        adminEvent.isPublished ? 'Event unpublished (Draft).' : 'Event published (Live).',
+      );
       window.location.reload();
     } catch (e: unknown) {
       notify('error', 'FAILED', e instanceof Error ? e.message : 'Unknown error');
+    } finally {
+      setBusy(false);
     }
   };
 
   const toggleFreeze = async () => {
-    if (!event) return;
+    if (!adminEvent) return;
+    setBusy(true);
     try {
-      await api.adminPatchEvent(event.id, { isFrozen: !event.isFrozen });
-      notify('success', 'EVENT UPDATED', event.isFrozen ? 'Board unfrozen.' : 'Board frozen.');
+      await api.adminPatchEvent(adminEvent.id, { isFrozen: !adminEvent.isFrozen });
+      notify(
+        'success',
+        'LEADERBOARD UPDATED',
+        adminEvent.isFrozen ? 'Board unfrozen.' : 'Board frozen.',
+      );
       window.location.reload();
     } catch (e: unknown) {
       notify('error', 'FAILED', e instanceof Error ? e.message : 'Unknown error');
+    } finally {
+      setBusy(false);
     }
   };
 
-  const fmtDate = (d: string | null) => d ? new Date(d).toLocaleString() : '—';
+  const setLiveWindow = async (hours: number) => {
+    if (!adminEvent) return;
+    setBusy(true);
+    try {
+      const now = new Date();
+      const end = new Date(now.getTime() + hours * 3600 * 1000);
+      await api.adminPatchEvent(adminEvent.id, {
+        startsAt: now.toISOString(),
+        endsAt: end.toISOString(),
+        isPublished: true,
+      });
+      notify('success', 'WINDOW ACTIVATED', `Event set to Live for ${hours} hours.`);
+      window.location.reload();
+    } catch (e: unknown) {
+      notify('error', 'FAILED', e instanceof Error ? e.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const endEventNow = async () => {
+    if (!adminEvent) return;
+    setBusy(true);
+    try {
+      const now = new Date();
+      await api.adminPatchEvent(adminEvent.id, {
+        endsAt: now.toISOString(),
+      });
+      notify('success', 'EVENT CLOSED', 'Event end time set to now.');
+      window.location.reload();
+    } catch (e: unknown) {
+      notify('error', 'FAILED', e instanceof Error ? e.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const visible = challenges.filter((c) => c.state === 'visible').length;
+  const hidden = challenges.filter((c) => c.state === 'hidden').length;
+  const locked = challenges.filter((c) => c.state === 'locked').length;
+
+  const now = Date.now();
+  const activeGlitch = glitches.find(
+    (g) => new Date(g.startsAt).getTime() <= now && new Date(g.endsAt).getTime() > now,
+  );
+  const nextGlitch = glitches
+    .filter((g) => new Date(g.startsAt).getTime() > now)
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())[0];
+
+  const fmtDate = (d: string | null) => (d ? new Date(d).toLocaleString() : '—');
 
   return (
     <>
       <AdminNav />
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         {loading ? (
-          <div className="text-[11px] tracking-[0.3em] text-[#5A6379]">LOADING…</div>
-        ) : !event ? (
-          <div className="text-[11px] tracking-[0.3em] text-[#E84D7E]">NO EVENT LOADED</div>
+          <div className="text-[11px] tracking-[0.3em] text-[#5A6379]">ESTABLISHING COMMAND TELEMETRY…</div>
+        ) : !adminEvent ? (
+          <div className="text-[11px] tracking-[0.3em] text-[#E84D7E]">NO ACTIVE EVENT FOUND</div>
         ) : (
           <>
-            <div className="text-[9px] tracking-[0.3em] text-[#E0A83E]">■ EVENT STATUS</div>
-            <h1 className="mt-1 font-display text-2xl tracking-wide text-[#F2F5FA]">{event.name}</h1>
-            <div className="mt-1 text-[11px] tracking-[0.12em] text-[#5A6379]">SLUG: {event.slug}</div>
-
-            <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-              <StatCard label="STATUS" value={event.isPublished ? 'LIVE' : 'DRAFT'} color={event.isPublished ? '#5ED6E3' : '#5A6379'} />
-              <StatCard label="BOARD" value={event.isFrozen ? 'FROZEN' : 'LIVE'} color={event.isFrozen ? '#E84D7E' : '#5ED6E3'} />
-              <StatCard label="CHALLENGES" value={`${visible}V / ${hidden}H / ${locked}L`} color="#D5DBE7" />
-              <StatCard label="TOTAL" value={String(totalChallenges)} color="#5ED6E3" />
+            {/* Header info */}
+            <div className="flex items-start justify-between flex-wrap gap-4">
+              <div>
+                <div className="text-[9px] tracking-[0.3em] text-[#E0A83E]">■ COMMAND ARCHIVE OVERVIEW</div>
+                <h1 className="mt-1 font-display text-2xl font-bold tracking-wide text-[#F2F5FA]">
+                  {adminEvent.name}
+                </h1>
+                <div className="mt-1 flex items-center gap-4 text-[11px] text-[#5A6379]">
+                  <span>SLUG: <strong className="text-[#8B93A9] font-mono">{adminEvent.slug}</strong></span>
+                  <span>ID: <strong className="text-[#8B93A9] font-mono">{adminEvent.id}</strong></span>
+                </div>
+                {adminEvent.description && (
+                  <p className="mt-2 text-[12px] text-[#8B93A9] max-w-2xl leading-relaxed">
+                    {adminEvent.description}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => navigateTo('ADMIN_EVENTS')}
+                  className="px-4 py-2 border border-[#E0A83E]/40 text-[11px] tracking-[0.18em] text-[#E0A83E] hover:bg-[#E0A83E]/10 cursor-pointer"
+                >
+                  MANAGE ALL EVENTS →
+                </button>
+              </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="border border-[#1E2536] bg-[#0B0E16]/50 px-5 py-4">
-                <div className="text-[10px] tracking-[0.25em] text-[#5A6379]">TIME WINDOW</div>
-                <div className="mt-2 text-[12px] text-[#D5DBE7]">
-                  <div>STARTS: <span className="text-[#8B93A9]">{fmtDate(event.startsAt)}</span></div>
-                  <div>ENDS: <span className="text-[#8B93A9]">{fmtDate(event.endsAt)}</span></div>
+            {/* Quick Metrics */}
+            <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-3">
+              <StatCard
+                label="STATUS"
+                value={adminEvent.isPublished ? 'LIVE' : 'DRAFT'}
+                color={adminEvent.isPublished ? '#5ED6E3' : '#5A6379'}
+                sub={adminEvent.isPublished ? 'Open for players' : 'Hidden from public'}
+              />
+              <StatCard
+                label="LEADERBOARD"
+                value={adminEvent.isFrozen ? 'FROZEN' : 'LIVE'}
+                color={adminEvent.isFrozen ? '#E84D7E' : '#5ED6E3'}
+                sub={adminEvent.isFrozen ? 'Scores locked' : 'Real-time updates'}
+              />
+              <StatCard
+                label="TOTAL CELLS"
+                value={String(stats?.teamsCount ?? '0')}
+                color="#F2F5FA"
+                sub="Registered teams"
+              />
+              <StatCard
+                label="CHALLENGES"
+                value={`${visible}V / ${hidden}H`}
+                color="#D5DBE7"
+                sub={`${locked} locked · ${challenges.length} total`}
+              />
+              <StatCard
+                label="TOTAL SOLVES"
+                value={String(stats?.solvesCount ?? '0')}
+                color="#5ED6E3"
+                sub={`${stats?.submissionsCount ?? '0'} attempts`}
+              />
+            </div>
+
+            {/* Time Window & Glitch Status */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="border border-[#1E2536] bg-[#0B0E16]/70 p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] tracking-[0.25em] text-[#5A6379]">EVENT TIME WINDOW</span>
+                  <span className={`text-[10px] tracking-[0.2em] font-bold ${
+                    adminEvent.startsAt && new Date(adminEvent.startsAt).getTime() > now
+                      ? 'text-[#E0A83E]'
+                      : adminEvent.endsAt && new Date(adminEvent.endsAt).getTime() < now
+                      ? 'text-[#E84D7E]'
+                      : 'text-[#5ED6E3]'
+                  }`}>
+                    {adminEvent.startsAt && new Date(adminEvent.startsAt).getTime() > now
+                      ? 'PENDING'
+                      : adminEvent.endsAt && new Date(adminEvent.endsAt).getTime() < now
+                      ? 'CLOSED'
+                      : 'RUNNING'}
+                  </span>
+                </div>
+                <div className="mt-3 text-[12px] space-y-1.5 text-[#D5DBE7]">
+                  <div>STARTS: <span className="text-[#8B93A9] ml-2 font-mono">{fmtDate(adminEvent.startsAt)}</span></div>
+                  <div>ENDS: <span className="text-[#8B93A9] ml-2 font-mono">{fmtDate(adminEvent.endsAt)}</span></div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-[#1E2536] flex flex-wrap gap-2">
+                  <button
+                    onClick={() => void setLiveWindow(48)}
+                    disabled={busy}
+                    className="px-3 py-1.5 border border-[#5ED6E3]/40 text-[10px] tracking-[0.15em] text-[#5ED6E3] hover:bg-[#5ED6E3]/10 cursor-pointer disabled:opacity-40"
+                  >
+                    GO LIVE NOW (48h)
+                  </button>
+                  <button
+                    onClick={() => void setLiveWindow(24)}
+                    disabled={busy}
+                    className="px-3 py-1.5 border border-[#5ED6E3]/40 text-[10px] tracking-[0.15em] text-[#5ED6E3] hover:bg-[#5ED6E3]/10 cursor-pointer disabled:opacity-40"
+                  >
+                    GO LIVE NOW (24h)
+                  </button>
+                  <button
+                    onClick={() => void endEventNow()}
+                    disabled={busy}
+                    className="px-3 py-1.5 border border-[#E84D7E]/40 text-[10px] tracking-[0.15em] text-[#E84D7E] hover:bg-[#E84D7E]/10 cursor-pointer disabled:opacity-40"
+                  >
+                    END EVENT NOW
+                  </button>
                 </div>
               </div>
-              <div className="border border-[#1E2536] bg-[#0B0E16]/50 px-5 py-4">
-                <div className="text-[10px] tracking-[0.25em] text-[#5A6379]">TIME GLITCH</div>
-                <div className="mt-2 text-[12px] text-[#D5DBE7]">
+
+              <div className="border border-[#1E2536] bg-[#0B0E16]/70 p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] tracking-[0.25em] text-[#5A6379]">TIME GLITCH ENGINE</span>
+                  <button
+                    onClick={() => navigateTo('ADMIN_GLITCHES')}
+                    className="text-[10px] tracking-[0.15em] text-[#5ED6E3] hover:underline cursor-pointer"
+                  >
+                    CONFIGURE →
+                  </button>
+                </div>
+                <div className="mt-3 text-[12px] space-y-1.5 text-[#D5DBE7]">
                   {activeGlitch ? (
-                    <div className="text-[#5ED6E3]">ACTIVE — ends {fmtDate(activeGlitch.endsAt)}</div>
+                    <div className="text-[#5ED6E3] font-bold">
+                      ACTIVE: {activeGlitch.label || 'Glitch Window'} — ends {fmtDate(activeGlitch.endsAt)}
+                    </div>
                   ) : nextGlitch ? (
-                    <div>NEXT: <span className="text-[#8B93A9]">{fmtDate(nextGlitch.startsAt)}</span></div>
+                    <div>NEXT: <span className="text-[#8B93A9] ml-2 font-mono">{fmtDate(nextGlitch.startsAt)}</span></div>
                   ) : (
-                    <div className="text-[#5A6379]">NO GLITCHES SCHEDULED</div>
+                    <div className="text-[#5A6379]">No time glitches currently active or scheduled.</div>
                   )}
-                  <div className="text-[#5A6379] mt-1">{glitches.length} total scheduled</div>
+                  <div className="text-[11px] text-[#5A6379] mt-2">
+                    {glitches.length} total glitch windows programmed for this event.
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 text-[9px] tracking-[0.3em] text-[#E0A83E]">■ QUICK ACTIONS</div>
-            <div className="mt-3 flex flex-wrap gap-3">
-              <ActionBtn label={event.isPublished ? 'UNPUBLISH EVENT' : 'PUBLISH EVENT'} onClick={togglePublish} danger={event.isPublished} />
-              <ActionBtn label={event.isFrozen ? 'UNFREEZE BOARD' : 'FREEZE BOARD'} onClick={toggleFreeze} danger={!event.isFrozen} />
-              <ActionBtn label="MANAGE EVENTS →" onClick={() => navigateTo('ADMIN_EVENTS')} />
-              <ActionBtn label="MANAGE CHALLENGES →" onClick={() => navigateTo('ADMIN_CHALLENGES')} />
-              <ActionBtn label="MANAGE GLITCHES →" onClick={() => navigateTo('ADMIN_GLITCHES')} />
+            {/* Quick Action Navigation Cards */}
+            <div className="mt-8">
+              <div className="text-[9px] tracking-[0.3em] text-[#E0A83E] mb-3">■ COMMAND SECTIONS</div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <NavCard
+                  title="CHALLENGES"
+                  detail={`${challenges.length} challenges configured`}
+                  sub="Add, edit flags, delete, and manage hints"
+                  onClick={() => navigateTo('ADMIN_CHALLENGES')}
+                  btnLabel="OPEN CHALLENGES →"
+                />
+                <NavCard
+                  title="TIME GLITCHES"
+                  detail={`${glitches.length} windows scheduled`}
+                  sub="Schedule point boost windows and multipliers"
+                  onClick={() => navigateTo('ADMIN_GLITCHES')}
+                  btnLabel="OPEN GLITCHES →"
+                />
+                <NavCard
+                  title="CELLS & ROSTER"
+                  detail={`${stats?.teamsCount ?? '0'} teams registered`}
+                  sub="View operatives, rosters, and ban/unban cells"
+                  onClick={() => navigateTo('ADMIN_TEAMS')}
+                  btnLabel="OPEN TEAMS →"
+                />
+                <NavCard
+                  title="LIVE TELEMETRY"
+                  detail={`${stats?.solvesCount ?? '0'} solves recorded`}
+                  sub="Real-time submission audit and flag validation"
+                  onClick={() => navigateTo('ADMIN_ACTIVITY')}
+                  btnLabel="OPEN TELEMETRY →"
+                />
+              </div>
+            </div>
+
+            {/* Controls Bar */}
+            <div className="mt-8 border border-[#1E2536] bg-[#0A0D15] p-5 flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <div className="text-[10px] tracking-[0.2em] text-[#E0A83E]">EVENT CONTROLS</div>
+                <div className="text-[12px] text-[#8B93A9] mt-0.5">Toggle publication or leaderboard freeze state.</div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={togglePublish}
+                  disabled={busy}
+                  className={`px-4 py-2 border text-[11px] font-bold tracking-[0.18em] cursor-pointer disabled:opacity-40 ${
+                    adminEvent.isPublished
+                      ? 'border-[#E84D7E]/50 text-[#E84D7E] hover:bg-[#E84D7E]/10'
+                      : 'border-[#5ED6E3]/50 text-[#5ED6E3] hover:bg-[#5ED6E3]/10'
+                  }`}
+                >
+                  {adminEvent.isPublished ? 'UNPUBLISH EVENT' : 'PUBLISH EVENT'}
+                </button>
+                <button
+                  onClick={toggleFreeze}
+                  disabled={busy}
+                  className={`px-4 py-2 border text-[11px] font-bold tracking-[0.18em] cursor-pointer disabled:opacity-40 ${
+                    adminEvent.isFrozen
+                      ? 'border-[#5ED6E3]/50 text-[#5ED6E3] hover:bg-[#5ED6E3]/10'
+                      : 'border-[#E84D7E]/50 text-[#E84D7E] hover:bg-[#E84D7E]/10'
+                  }`}
+                >
+                  {adminEvent.isFrozen ? 'UNFREEZE BOARD' : 'FREEZE BOARD'}
+                </button>
+              </div>
             </div>
           </>
         )}
@@ -115,22 +341,39 @@ export const AdminDashboard: React.FC = () => {
   );
 };
 
-const StatCard: React.FC<{ label: string; value: string; color: string }> = ({ label, value, color }) => (
-  <div className="border border-[#1E2536] bg-[#0B0E16]/50 px-4 py-3">
+const StatCard: React.FC<{ label: string; value: string; color: string; sub?: string }> = ({
+  label,
+  value,
+  color,
+  sub,
+}) => (
+  <div className="border border-[#1E2536] bg-[#0B0E16]/70 px-4 py-3.5">
     <div className="text-[9px] tracking-[0.25em] text-[#5A6379]">{label}</div>
-    <div className="mt-1 text-[16px] font-bold tracking-[0.1em]" style={{ color }}>{value}</div>
+    <div className="mt-1 text-[17px] font-bold tracking-[0.08em]" style={{ color }}>
+      {value}
+    </div>
+    {sub && <div className="mt-1 text-[10px] text-[#5A6379] truncate">{sub}</div>}
   </div>
 );
 
-const ActionBtn: React.FC<{ label: string; onClick: () => void; danger?: boolean }> = ({ label, onClick, danger }) => (
-  <button
-    onClick={onClick}
-    className={`px-5 py-2.5 text-[11px] font-bold tracking-[0.2em] cursor-pointer border ${
-      danger
-        ? 'border-[#E84D7E]/50 text-[#E84D7E] hover:bg-[#E84D7E]/[0.08]'
-        : 'border-[#1E2536] text-[#5ED6E3] hover:bg-[#5ED6E3]/[0.06]'
-    }`}
-  >
-    {label}
-  </button>
+const NavCard: React.FC<{
+  title: string;
+  detail: string;
+  sub: string;
+  onClick: () => void;
+  btnLabel: string;
+}> = ({ title, detail, sub, onClick, btnLabel }) => (
+  <div className="border border-[#1E2536] bg-[#0B0E16]/70 p-5 flex flex-col justify-between">
+    <div>
+      <div className="text-[12px] font-bold tracking-[0.15em] text-[#F2F5FA] font-display">{title}</div>
+      <div className="mt-1 text-[11px] text-[#5ED6E3]">{detail}</div>
+      <div className="mt-2 text-[11px] text-[#8B93A9] leading-relaxed">{sub}</div>
+    </div>
+    <button
+      onClick={onClick}
+      className="mt-5 w-full border border-[#1E2536] py-2 text-[10px] tracking-[0.18em] text-[#5ED6E3] hover:border-[#5ED6E3] hover:bg-[#5ED6E3]/[0.06] cursor-pointer text-center"
+    >
+      {btnLabel}
+    </button>
+  </div>
 );

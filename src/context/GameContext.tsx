@@ -122,6 +122,10 @@ interface GameContextType {
 
   // Event + team
   event: ApiEvent | null;
+  adminEvent: ApiEvent | null;
+  allEvents: ApiEvent[];
+  adminSelectedEventId: string | null;
+  setAdminSelectedEventId: (id: string | null) => void;
   window: EventWindow;
   /** ms until the event opens (pending) or closes (running). Null when ended. */
   windowMs: number | null;
@@ -222,11 +226,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [event, setEvent] = useState<ApiEvent | null>(null);
+  const [allEvents, setAllEvents] = useState<ApiEvent[]>([]);
+  const [adminSelectedEventId, setAdminSelectedEventId] = useState<string | null>(null);
   const [team, setTeam] = useState<ApiTeam | null>(null);
   const [board, setBoard] = useState<ApiBoard | null>(null);
   const [scoreboard, setScoreboard] = useState<TeamScore[]>([]);
   const [scoreboardFrozen, setScoreboardFrozen] = useState(false);
   const [bootNonce, setBootNonce] = useState(0);
+
+  const adminEvent = allEvents.find((e) => e.id === adminSelectedEventId) ?? event;
 
   // UI-only state. None of this is authoritative, so it stays local.
   const [currentView, setCurrentView] = useState<ViewType>('LOGIN');
@@ -281,6 +289,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           api.listCategories().catch(() => []),
         ]);
         if (cancelled) return;
+        setAllEvents(events);
 
         setCategoryNames(Object.fromEntries(categories.map((c) => [c.id, c.name])));
 
@@ -655,8 +664,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const hash = window.location.hash;
     const isAdminHash = hash.startsWith('#/admin');
     if (phase === 'unauthenticated') setCurrentView('LOGIN');
-    else if (phase === 'no-team' && !isAdminHash) setCurrentView('TEAM');
-  }, [phase]);
+    else if (phase === 'no-team' && !isAdminHash && !currentUser?.isAdmin) setCurrentView('TEAM');
+  }, [phase, currentUser]);
 
   // ---------------------------------------------------------------- UI ----
 
@@ -706,6 +715,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const auth = await api.login(email.trim(), password);
         await adoptSession(auth);
         soundFx.playClick();
+        if (auth.user.isAdmin) {
+          setCurrentView('ADMIN');
+          syncHash('ADMIN');
+        }
         return { success: true, message: `Welcome, ${auth.user.username}.` };
       } catch (error) {
         const message = errorMessage(error);
@@ -1027,7 +1040,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     signup,
     logout,
+    // Event + team
     event,
+    adminEvent,
+    allEvents,
+    adminSelectedEventId,
+    setAdminSelectedEventId,
     window: window_,
     windowMs,
     team,

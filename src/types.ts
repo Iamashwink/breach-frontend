@@ -123,4 +123,42 @@ export type ViewType =
   | 'ADMIN'
   | 'ADMIN_EVENTS'
   | 'ADMIN_CHALLENGES'
-  | 'ADMIN_GLITCHES';
+  | 'ADMIN_GLITCHES'
+  | 'ADMIN_TEAMS'
+  | 'ADMIN_ACTIVITY';
+
+export interface AdminTeamInfo {
+  id: string;
+  eventId: string;
+  name: string;
+  joinCode: string;
+  banned: boolean;
+  score: number;
+  createdAt: string;
+  members: {
+    userId: string;
+    role: 'captain' | 'member';
+    username: string;
+    displayName: string | null;
+  }[];
+}
+
+export interface AdminSubmissionLog {
+  id: string;
+  teamId: string;
+  teamName: string;
+  challengeId: string;
+  challengeTitle: string;
+  flag: string;
+  verdict: 'correct' | 'incorrect' | 'rate_limited' | 'unsolvable' | 'invalid_state';
+  submittedAt: string;
+}
+
+export interface AdminEventStats {
+  challengesCount: number;
+  totalPoints: number;
+  teamsCount: number;
+  solvesCount: number;
+  submissionsCount: number;
+}
+
