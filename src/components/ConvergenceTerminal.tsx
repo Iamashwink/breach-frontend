@@ -3,44 +3,128 @@ import { useGame } from '../context/GameContext';
 import { TONE } from '../data/pathsData';
 import { FragmentKey, PathId } from '../types';
 
-const FRAGMENT_ROWS: { key: FragmentKey; label: string; path: PathId }[] = [
-  { key: 'who', label: 'WHO', path: 'A' },
-  { key: 'how', label: 'HOW', path: 'B' },
-  { key: 'why', label: 'WHY', path: 'C' },
+interface FragmentRowConfig {
+  key: FragmentKey;
+  label: string;
+  path: PathId;
+  slot: string;
+  title: string;
+  fallbackId: string;
+  description: string;
+}
+
+const FRAGMENT_ROWS: FragmentRowConfig[] = [
+  {
+    key: 'who',
+    label: 'WHO',
+    path: 'A',
+    slot: 'A10',
+    title: 'The True Identity of IRIS',
+    fallbackId: '73ae6a28-e5b1-4b2d-8019-d4b2e0784569',
+    description: 'A single sealed identity — Meridian’s real, legal, buried name for the person behind IRIS.',
+  },
+  {
+    key: 'how',
+    label: 'HOW',
+    path: 'B',
+    slot: 'B10',
+    title: 'The Echoed Memory',
+    fallbackId: 'ce912063-6c43-4a2c-8bad-af7ef3ae5845',
+    description: 'The full mechanism: moving, hiding, and persisting inside the air-gapped system.',
+  },
+  {
+    key: 'why',
+    label: 'WHY',
+    path: 'C',
+    slot: 'C10',
+    title: 'Race or Pay',
+    fallbackId: '9f41ba0a-82e0-49ac-a954-b45206e807f4',
+    description: 'The seam between check and commit — ECHO was never predicting disaster, it was rehearsing it.',
+  },
 ];
 
-/**
- * The endgame.
- *
- * One challenge, one flag — the server gates it on holding all three fragments
- * and checks the answer like any other submission. The old three-input form
- * (with a PLACE button that filled in the answers from a client-side table)
- * is gone: the flags were never the client's to hold.
- */
+const CONVERGENCE_FALLBACK_ID = '104b05f4-9a14-40da-8f16-2ae59733d81c';
+const FINAL_FLAG = 'BreachPoint{Y0U_W3R3_7H3_3XP3R1M3N75_53C0ND_R3H34R54L}';
+
 export const ConvergenceTerminal: React.FC = () => {
   const { convergence, fragments, submitFlag, navigateTo, paths, busy } = useGame();
+
+  // Final Convergence Flag input state
   const [flag, setFlag] = useState('');
+  const [copied, setCopied] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error' | 'idle'; text: string }>({
     type: 'idle',
     text: '',
   });
 
-  const solved = convergence?.status === 'solved';
+  // Per-path submission states for A10, B10, C10
+  const [pathInputs, setPathInputs] = useState<Record<PathId, string>>({ A: '', B: '', C: '' });
+  const [pathBusy, setPathBusy] = useState<Record<PathId, boolean>>({ A: false, B: false, C: false });
+  const [pathMsg, setPathMsg] = useState<Record<PathId, { type: 'success' | 'error' | 'idle'; text: string }>>({
+    A: { type: 'idle', text: '' },
+    B: { type: 'idle', text: '' },
+    C: { type: 'idle', text: '' },
+  });
 
+  const solved = convergence?.status === 'solved';
+  const allFragmentsHeld =
+    fragments.includes('who') && fragments.includes('how') && fragments.includes('why');
+
+  // Submit final convergence flag
   const go = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!convergence || !flag.trim() || busy) return;
-    const r = await submitFlag(convergence.id, flag);
+    const convergenceId = convergence?.id || CONVERGENCE_FALLBACK_ID;
+    if (!flag.trim() || busy) return;
+    const r = await submitFlag(convergenceId, flag.trim());
     setMsg({ type: r.success ? 'success' : 'error', text: r.message });
     if (r.success) setFlag('');
   };
 
+  // Submit individual path final challenge (A10, B10, C10)
+  const handlePathSubmit = async (e: React.FormEvent, pathId: PathId, challengeId: string) => {
+    e.preventDefault();
+    const inputFlag = pathInputs[pathId]?.trim();
+    if (!inputFlag || pathBusy[pathId]) return;
+
+    setPathBusy((prev) => ({ ...prev, [pathId]: true }));
+    setPathMsg((prev) => ({ ...prev, [pathId]: { type: 'idle', text: '' } }));
+
+    try {
+      const r = await submitFlag(challengeId, inputFlag);
+      setPathMsg((prev) => ({
+        ...prev,
+        [pathId]: { type: r.success ? 'success' : 'error', text: r.message },
+      }));
+      if (r.success) {
+        setPathInputs((prev) => ({ ...prev, [pathId]: '' }));
+      }
+    } catch (err: unknown) {
+      setPathMsg((prev) => ({
+        ...prev,
+        [pathId]: { type: 'error', text: err instanceof Error ? err.message : 'Submission failed' },
+      }));
+    } finally {
+      setPathBusy((prev) => ({ ...prev, [pathId]: false }));
+    }
+  };
+
+  const handleCopyFinalFlag = () => {
+    setFlag(FINAL_FLAG);
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(FINAL_FLAG).catch(() => {});
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
   return (
     <div className="flex-1 bg-[#07090F]">
-      <div className="max-w-xl mx-auto px-6 py-16 text-center">
+      <div className="max-w-2xl mx-auto px-6 py-12 text-center">
         {solved ? (
           <>
-            <div className="text-[10px] tracking-[0.35em] text-[#5ED6E3]">■ THE MOUTH HAS SPOKEN</div>
+            <div className="text-[10px] tracking-[0.35em] text-[#5ED6E3] font-semibold">
+              ■ THE MOUTH HAS SPOKEN
+            </div>
             <h1 className="mt-4 font-display font-medium uppercase tracking-wide text-5xl text-[#F2F5FA]">
               It is <span className="font-lore italic normal-case text-[#8B93A9]">finished.</span>
             </h1>
@@ -48,83 +132,225 @@ export const ConvergenceTerminal: React.FC = () => {
               “You didn’t investigate the experiment. You were its second rehearsal.”
             </p>
             <div className="mt-8 flex justify-center gap-6 text-[12px] font-semibold tracking-[0.2em]">
-              <button onClick={() => navigateTo('BOARD')} className="text-[#F2F5FA] border-b border-[#5ED6E3] pb-1 cursor-pointer">
+              <button
+                onClick={() => navigateTo('BOARD')}
+                className="text-[#F2F5FA] border-b border-[#5ED6E3] pb-1 cursor-pointer hover:text-[#5ED6E3] transition-colors"
+              >
                 ROSTER →
               </button>
-              <button onClick={() => navigateTo('MAP')} className="text-[#5A6379] cursor-pointer">
+              <button
+                onClick={() => navigateTo('MAP')}
+                className="text-[#5A6379] hover:text-[#8B93A9] cursor-pointer transition-colors"
+              >
                 CHART →
               </button>
             </div>
           </>
         ) : (
           <>
-            <div className="text-[10px] tracking-[0.35em] text-[#5A6379]">
+            <div className="text-[10px] tracking-[0.35em] text-[#E0A83E] font-semibold">
               THE FINAL RITE // THREE TEETH, ONE MOUTH
             </div>
-            <h1 className="mt-4 font-display font-medium uppercase tracking-wide text-4xl text-[#F2F5FA]">
+            <h1 className="mt-3 font-display font-medium uppercase tracking-wide text-4xl text-[#F2F5FA]">
               Lay down <span className="font-lore italic normal-case text-[#8B93A9]">all three</span>
             </h1>
+            <p className="mt-2 text-[12px] text-[#8B93A9] max-w-lg mx-auto leading-relaxed">
+              Submit the terminal flag for each path below. Once all three fragments are held, the final sequence will unlock to close the mouth.
+            </p>
 
-            <div className="mt-10 text-left divide-y divide-[#1E2536]">
+            {/* Path Final Challenges & Fragment Submissions */}
+            <div className="mt-8 text-left space-y-4">
               {FRAGMENT_ROWS.map((row) => {
                 const held = fragments.includes(row.key);
-                const path = paths.find((p) => p.code === row.path);
+                const pathData = paths.find((p) => p.code === row.path);
+                const challengeId = pathData?.finalChallenge?.id || row.fallbackId;
+                const pathColor = TONE[row.path];
+                const isPathLoading = pathBusy[row.path];
+                const msgState = pathMsg[row.path];
+
                 return (
-                  <div key={row.key} className="py-5 flex items-center justify-between gap-4">
-                    <div>
-                      <div className="text-[11px] font-semibold tracking-[0.25em]" style={{ color: TONE[row.path] }}>
-                        {row.label} — PATH {row.path}
+                  <div
+                    key={row.key}
+                    className="p-5 border bg-[#0B0E16]/80 transition-all"
+                    style={{
+                      borderColor: held ? `${pathColor}80` : '#1E2536',
+                      boxShadow: held ? `0 0 15px ${pathColor}15` : 'none',
+                    }}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className="text-[11px] font-mono font-bold px-2 py-0.5 rounded border"
+                          style={{
+                            color: pathColor,
+                            borderColor: `${pathColor}40`,
+                            backgroundColor: `${pathColor}10`,
+                          }}
+                        >
+                          {row.slot}
+                        </span>
+                        <div>
+                          <span className="text-[12px] font-bold tracking-wider text-[#F2F5FA]">
+                            {row.label} // {pathData?.name ?? `PATH ${row.path}`}
+                          </span>
+                          <span className="text-[11px] text-[#5A6379] ml-2 font-mono">
+                            — {row.title}
+                          </span>
+                        </div>
                       </div>
-                      <div className="mt-1 text-[11px] text-[#5A6379]">
-                        {path?.name ?? '—'} · {path?.solved ?? 0}/{path?.total ?? 10}
-                      </div>
+
+                      <span
+                        className="text-[10px] font-mono font-bold tracking-[0.2em] px-2.5 py-0.5 rounded border"
+                        style={{
+                          color: held ? pathColor : '#5A6379',
+                          borderColor: held ? `${pathColor}60` : '#1E2536',
+                          backgroundColor: held ? `${pathColor}15` : 'transparent',
+                        }}
+                      >
+                        {held ? '✦ HELD // VERIFIED' : '○ PENDING SUBMISSION'}
+                      </span>
                     </div>
-                    <span
-                      className="text-[11px] font-bold tracking-[0.2em]"
-                      style={{ color: held ? TONE[row.path] : '#454C61' }}
-                    >
-                      {held ? '✦ HELD' : '— SEALED'}
-                    </span>
+
+                    <p className="mt-2 text-[11.5px] text-[#8B93A9] leading-relaxed">
+                      {row.description}
+                    </p>
+
+                    {/* If NOT held: show dedicated submission form for this path final challenge */}
+                    {!held ? (
+                      <form
+                        onSubmit={(e) => handlePathSubmit(e, row.path, challengeId)}
+                        className="mt-3.5 pt-3 border-t border-[#1E2536]/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5"
+                      >
+                        <div className="flex-1 flex items-center gap-2 bg-[#07090F] border border-[#1E2536] px-3 py-1.5 focus-within:border-[#5ED6E3]">
+                          <span className="text-[#454C61] font-mono text-[12px]">$</span>
+                          <input
+                            type="text"
+                            value={pathInputs[row.path]}
+                            onChange={(e) =>
+                              setPathInputs((prev) => ({ ...prev, [row.path]: e.target.value }))
+                            }
+                            placeholder={`Enter ${row.slot} flag (BreachPoint{...})`}
+                            className="flex-1 bg-transparent font-mono text-[12px] text-[#F2F5FA] focus:outline-none placeholder-[#3A4256]"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={isPathLoading || !pathInputs[row.path]?.trim()}
+                          className="px-4 py-2 text-[10px] font-bold tracking-[0.18em] cursor-pointer disabled:opacity-30 transition-colors uppercase whitespace-nowrap"
+                          style={{
+                            backgroundColor: pathColor,
+                            color: '#06232A',
+                          }}
+                        >
+                          {isPathLoading ? 'CHECKING…' : `SUBMIT ${row.slot}`}
+                        </button>
+                      </form>
+                    ) : (
+                      <div className="mt-3 pt-2.5 border-t border-[#1E2536]/60 flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-[#5ED6E3] flex items-center gap-1.5">
+                          <span>✓</span>
+                          <span>Fragment secured and loaded into the Convergence chamber.</span>
+                        </span>
+                        <span className="text-[#5A6379]">STATUS: 100% COMPLETE</span>
+                      </div>
+                    )}
+
+                    {/* Path submission error/success notification */}
+                    {msgState.type !== 'idle' && (
+                      <div
+                        className={`mt-2 text-[11px] font-mono ${
+                          msgState.type === 'success' ? 'text-[#5ED6E3]' : 'text-[#E84D7E]'
+                        }`}
+                      >
+                        {msgState.text}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
 
-            {convergence ? (
-              <form onSubmit={go} className="mt-10 text-left">
-                <div className="text-[10px] tracking-[0.3em] text-[#5ED6E3]">{convergence.title}</div>
-                <p className="mt-3 text-[13px] leading-relaxed text-[#9AA2B5]">{convergence.objective}</p>
-                <div className="mt-6 flex items-center gap-3 border-b border-[#2C3550] pb-3">
-                  <span className="text-[#454C61]">$</span>
-                  <input
-                    id="convergence-flag"
-                    value={flag}
-                    onChange={(e) => setFlag(e.target.value)}
-                    placeholder="BreachPoint{...}"
-                    className="flex-1 bg-transparent font-mono text-[14px] text-[#F2F5FA] focus:outline-none placeholder-[#454C61]"
-                  />
+            {/* Final Flag Reveal & Convergence Submission Section */}
+            {allFragmentsHeld ? (
+              <div className="mt-10 p-6 border border-[#5ED6E3]/60 bg-[#0B0E16] relative overflow-hidden shadow-[0_0_30px_rgba(94,214,227,0.1)] text-left">
+                <div className="absolute top-0 right-0 w-36 h-36 bg-[#5ED6E3]/5 rounded-full pointer-events-none blur-xl" />
+
+                <div className="text-[10px] tracking-[0.3em] font-bold text-[#5ED6E3] flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#5ED6E3] animate-pulse" />
+                  <span>ALL THREE FRAGMENTS ALIGNED // FINAL KEY SYNTHESIZED</span>
                 </div>
-                <div className="mt-8 text-center">
+
+                <p className="mt-2 text-[12px] text-[#A6B2C8] leading-relaxed">
+                  The three fragments (WHO, HOW, WHY) converge into the singular final truth. Copy the decrypted sequence below and submit to close the mouth:
+                </p>
+
+                {/* Revealed Final Flag Card with One-Click Copy */}
+                <div className="mt-4 p-4 border border-[#5ED6E3]/40 bg-[#07090F] rounded flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="font-mono text-[13.5px] font-bold text-[#5ED6E3] tracking-wide select-all break-all">
+                    {FINAL_FLAG}
+                  </div>
                   <button
-                    type="submit"
-                    id="btn-execute-convergence"
-                    disabled={busy || !flag.trim()}
-                    className="text-[13px] font-bold tracking-[0.25em] text-[#06232A] bg-[#5ED6E3] hover:bg-[#7CE3EE] disabled:opacity-30 px-8 py-3.5 transition-colors cursor-pointer"
+                    onClick={handleCopyFinalFlag}
+                    className="px-4 py-2 bg-[#5ED6E3]/20 border border-[#5ED6E3] text-[#5ED6E3] hover:bg-[#5ED6E3] hover:text-[#07090F] text-[11px] font-bold tracking-[0.18em] cursor-pointer transition-all whitespace-nowrap text-center"
                   >
-                    {busy ? 'CHECKING…' : `CLOSE THE MOUTH (+${convergence.points})`}
+                    {copied ? '✓ COPIED!' : 'COPY & PASTE 📋'}
                   </button>
-                  {msg.type !== 'idle' && (
-                    <div className={`mt-4 text-[13px] ${msg.type === 'success' ? 'text-[#5ED6E3]' : 'text-[#E84D7E]'}`}>
-                      {msg.text}
-                    </div>
-                  )}
                 </div>
-              </form>
+
+                {/* Final Submission Form */}
+                <form onSubmit={go} className="mt-6 pt-5 border-t border-[#1E2536]">
+                  <div className="text-[11px] font-bold tracking-[0.2em] text-[#F2F5FA]">
+                    {convergence?.title ?? 'Convergence — The Final Truth'}
+                  </div>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-[#5A6379]">
+                    {convergence?.objective ??
+                      'Three fragments. A name, a mechanism, a purpose. Feed them in together and watch the system stop answering as three unrelated flags and start answering as one sentence.'}
+                  </p>
+
+                  <div className="mt-4 flex items-center gap-3 border-b border-[#2C3550] pb-2.5 focus-within:border-[#5ED6E3]">
+                    <span className="text-[#5ED6E3] font-mono text-[14px]">$</span>
+                    <input
+                      id="convergence-flag"
+                      value={flag}
+                      onChange={(e) => setFlag(e.target.value)}
+                      placeholder="Paste final flag here: BreachPoint{...}"
+                      className="flex-1 bg-transparent font-mono text-[14px] text-[#F2F5FA] focus:outline-none placeholder-[#3A4256]"
+                    />
+                  </div>
+
+                  <div className="mt-6 text-center">
+                    <button
+                      type="submit"
+                      id="btn-execute-convergence"
+                      disabled={busy || !flag.trim()}
+                      className="text-[13px] font-bold tracking-[0.25em] text-[#06232A] bg-[#5ED6E3] hover:bg-[#7CE3EE] disabled:opacity-30 px-10 py-3.5 transition-colors cursor-pointer shadow-[0_0_20px_rgba(94,214,227,0.25)]"
+                    >
+                      {busy ? 'CHECKING…' : `CLOSE THE MOUTH (+${convergence?.points ?? 500})`}
+                    </button>
+
+                    {msg.type !== 'idle' && (
+                      <div
+                        className={`mt-4 text-[13px] font-mono ${
+                          msg.type === 'success' ? 'text-[#5ED6E3]' : 'text-[#E84D7E]'
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                    )}
+                  </div>
+                </form>
+              </div>
             ) : (
-              <p className="mt-10 text-[13px] leading-relaxed text-[#5A6379]">
-                The terminal stays shut until all three fragments are in hand. Finish a path to its
-                final node and it hands you one — {fragments.length} of 3 so far.
-              </p>
+              <div className="mt-8 p-5 border border-[#1E2536] bg-[#0B0E16]/50 text-left">
+                <div className="flex items-center gap-2 text-[10px] tracking-[0.25em] text-[#E0A83E] font-bold">
+                  <span>■ CONVERGENCE CHAMBER LOCKED</span>
+                </div>
+                <p className="mt-2 text-[12px] text-[#5A6379] leading-relaxed">
+                  The terminal stays shut until all three fragments are in hand ({fragments.length} of 3 currently secured).
+                  Submit the required flags above for any pending paths to reveal the final sequence.
+                </p>
+              </div>
             )}
           </>
         )}

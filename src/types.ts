@@ -91,6 +91,14 @@ export interface PathState {
   points: number;
   isCompleted?: boolean;
   isLocked?: boolean;
+  canSwitchFree?: boolean;
+  finalChallenge?: {
+    id: string;
+    title: string;
+    slot: string;
+    isSolved: boolean;
+    points: number;
+  } | null;
 }
 
 export interface TeamScore {

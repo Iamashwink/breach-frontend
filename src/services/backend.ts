@@ -201,11 +201,15 @@ export function pathStates(board: ApiBoard | null): PathState[] {
       isActive: p.isActive,
       isAttempted: p.isAttempted,
       isAvailable: p.isAvailable,
+      isCompleted: p.isCompleted,
+      isLocked: p.isLocked,
+      canSwitchFree: p.canSwitchFree,
       rewardMultiplier: p.rewardMultiplier,
       solved: p.solved,
       skipped: p.skipped,
       total: p.total,
       points: p.points,
+      finalChallenge: p.finalChallenge ?? null,
     }))
     .sort((a, b) => a.code.localeCompare(b.code));
 }

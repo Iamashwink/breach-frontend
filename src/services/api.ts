@@ -236,6 +236,13 @@ export interface ApiBoardPath {
   skipped: number;
   total: number;
   points: number;
+  finalChallenge?: {
+    id: string;
+    title: string;
+    slot: string;
+    isSolved: boolean;
+    points: number;
+  } | null;
 }
 
 export interface ApiActivePath {
