@@ -4,17 +4,18 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
  * TIME GLITCH
  * -----------------------------------------------------------------------------
  * Three phases, one component:
- *   1. ANNOUNCE  — full-screen takeover when the window opens (~3.6s)
- *   2. WINDOW    — slim brass HUD bar + live countdown while the window runs
- *   3. RESET     — shockwave pulse at T−0 when node values snap back to origin
+ *   1. ANNOUNCE  — full-screen takeover when the window opens (~4.6s)
+ *                  animates current -> initial points rewind, pauses for review
+ *   2. WINDOW    — live countdown while the window runs
+ *   3. RESET     — full temporal collapse animation returning initial -> current
  *
  * Mount once, near <ToastBanner /> in App.tsx:
  *
  *   <TimeGlitch
  *     active={glitchActive}
- *     endsAt={glitchEndsAt}                      // epoch ms
- *     sample={{ original: 500, decayed: 300 }}   // the value shown rewinding
- *     onReset={() => restoreAllChallengePoints()}
+ *     endsAt={glitchEndsAt}
+ *     sample={{ initial: 500, current: 300 }}
+ *     onReset={() => refresh()}
  *   />
  */
 
@@ -25,11 +26,18 @@ export interface TimeGlitchProps {
   active: boolean;
   /** Epoch ms when the window closes and points reset. */
   endsAt: number;
-  /** The representative node shown rewinding during the announcement. */
-  sample?: { original: number; decayed: number };
+  /** The representative node shown rewinding and returning. */
+  sample?: {
+    initial?: number;
+    current?: number;
+    original?: number;
+    decayed?: number;
+    slot?: string;
+    title?: string;
+  };
   /** Fired once the takeover collapses into the HUD bar. */
   onAnnounced?: () => void;
-  /** Fired at T−0 — restore every challenge's points here. */
+  /** Fired at T−0 or when glitch ends. */
   onReset?: () => void;
 }
 
@@ -40,25 +48,42 @@ const fmt = (s: number) => `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
 export const TimeGlitch: React.FC<TimeGlitchProps> = ({
   active,
   endsAt,
-  sample = { original: 500, decayed: 300 },
+  sample,
   onAnnounced,
   onReset,
 }) => {
+  const initialVal = sample?.initial ?? sample?.original ?? 500;
+  const rawCurrent = sample?.current ?? sample?.decayed ?? 300;
+  const currentVal = rawCurrent < initialVal ? rawCurrent : Math.max(10, Math.round(initialVal * 0.65));
+  const slotLabel = sample?.slot ?? '';
+
   const [phase, setPhase] = useState<TimeGlitchPhase>('idle');
   const [remaining, setRemaining] = useState(0);
   const [titleText, setTitleText] = useState('');
-  const [rewound, setRewound] = useState(sample.decayed);
+  const [rewound, setRewound] = useState(currentVal);
+  const [decayCount, setDecayCount] = useState(initialVal);
   const [struck, setStruck] = useState(false);
+  const [resetStruck, setResetStruck] = useState(false);
   const [jolt, setJolt] = useState(0);
-  const [reveal, setReveal] = useState({ rotor: false, eyebrow: false, core: false, rule: false, ledger: false, note: false, chip: false });
+  const [reveal, setReveal] = useState({
+    rotor: false,
+    eyebrow: false,
+    core: false,
+    rule: false,
+    ledger: false,
+    note: false,
+    chip: false,
+  });
   const [split, setSplit] = useState(false);
 
   const timers = useRef<number[]>([]);
   const raf = useRef<number>(0);
   const fired = useRef(false);
+  const prevActive = useRef(active);
 
-  const reduced = typeof window !== 'undefined'
-    && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const reduced =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   const at = useCallback((ms: number, fn: () => void) => {
     timers.current.push(window.setTimeout(fn, ms));
@@ -79,7 +104,10 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
       let out = '';
       for (let i = 0; i < text.length; i++) {
         const c = text[i];
-        if (c === ' ') { out += ' '; continue; }
+        if (c === ' ') {
+          out += ' ';
+          continue;
+        }
         if (t > seeds[i] + dur * 0.42) out += c;
         else if (t > seeds[i]) out += NOISE[(Math.random() * NOISE.length) | 0];
         else out += ' ';
@@ -91,62 +119,146 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
     raf.current = requestAnimationFrame(frame);
   }, []);
 
-  /* ── counter running backwards ──────────────────────────────────────── */
+  /* ── counter running backwards: currentVal -> initialVal ──────────── */
   const rewind = useCallback((from: number, to: number, dur: number) => {
     const start = performance.now();
     const frame = (now: number) => {
       const p = Math.min(1, (now - start) / dur);
       const eased = 1 - Math.pow(1 - p, 3);
       let v = Math.round(from + (to - from) * eased);
-      if (p < 0.62 && Math.random() > 0.55) v = to - ((Math.random() * 180) | 0);
-      setRewound(Math.max(0, v));
-      if (p < 1) requestAnimationFrame(frame);
-      else setRewound(to);
+      if (p < 0.62 && Math.random() > 0.55) {
+        v = to - ((Math.random() * Math.max(10, Math.abs(to - from) * 0.35)) | 0);
+      }
+      setRewound(Math.max(from, Math.min(to, v)));
+      if (p < 1) {
+        raf.current = requestAnimationFrame(frame);
+      } else {
+        setRewound(to);
+      }
     };
-    requestAnimationFrame(frame);
+    raf.current = requestAnimationFrame(frame);
   }, []);
 
-  /* ── announcement sequence ──────────────────────────────────────────── */
-  useEffect(() => {
-    if (!active) {
-      clearAll();
-      setPhase('idle');
-      fired.current = false;
-      setReveal({ rotor: false, eyebrow: false, core: false, rule: false, ledger: false, note: false, chip: false });
-      setTitleText('');
-      setRewound(sample.decayed);
-      setStruck(false);
+  /* ── counter running forward: initialVal -> currentVal ────────────── */
+  const forwardDecay = useCallback((from: number, to: number, dur: number) => {
+    const start = performance.now();
+    const frame = (now: number) => {
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      let v = Math.round(from - (from - to) * eased);
+      if (p < 0.62 && Math.random() > 0.55) {
+        v = to + ((Math.random() * Math.max(10, Math.abs(from - to) * 0.35)) | 0);
+      }
+      setDecayCount(Math.max(to, Math.min(from, v)));
+      if (p < 1) {
+        raf.current = requestAnimationFrame(frame);
+      } else {
+        setDecayCount(to);
+      }
+    };
+    raf.current = requestAnimationFrame(frame);
+  }, []);
+
+  /* ── reset / return animation sequence ────────────────────────────── */
+  const triggerReset = useCallback(() => {
+    if (fired.current) return;
+    fired.current = true;
+    clearAll();
+    setPhase('reset');
+    setResetStruck(false);
+    setDecayCount(initialVal);
+
+    if (reduced) {
+      setResetStruck(true);
+      setDecayCount(currentVal);
+      at(600, () => onReset?.());
+      at(2400, () => setPhase('idle'));
       return;
     }
 
+    at(400, () => setResetStruck(true));
+    at(550, () => forwardDecay(initialVal, currentVal, 1000));
+    at(1600, () => onReset?.());
+    // Pause on final decayed value for ~1.4s so the player clearly reads it:
+    at(3000, () => setPhase('idle'));
+  }, [clearAll, initialVal, currentVal, reduced, at, onReset, forwardDecay]);
+
+  /* ── announcement sequence ──────────────────────────────────────────── */
+  useEffect(() => {
+    if (!active) return;
+
+    clearAll();
+    fired.current = false;
     setPhase('announce');
+    setRewound(currentVal);
+    setStruck(false);
+    setReveal({
+      rotor: false,
+      eyebrow: false,
+      core: false,
+      rule: false,
+      ledger: false,
+      note: false,
+      chip: false,
+    });
 
     if (reduced) {
-      setReveal({ rotor: true, eyebrow: true, core: true, rule: true, ledger: true, note: true, chip: true });
+      setReveal({
+        rotor: true,
+        eyebrow: true,
+        core: true,
+        rule: true,
+        ledger: true,
+        note: true,
+        chip: true,
+      });
       setTitleText('TIME GLITCH');
       setStruck(true);
-      setRewound(sample.original);
-      at(2600, () => { setPhase('window'); onAnnounced?.(); });
+      setRewound(initialVal);
+      at(3500, () => {
+        setPhase('window');
+        onAnnounced?.();
+      });
       return clearAll;
     }
 
-    at(250, () => setReveal(r => ({ ...r, rotor: true })));
-    at(300, () => setReveal(r => ({ ...r, core: true })));
-    [320, 700, 1500, 2250].forEach(d => at(d, () => setJolt(j => j + 1)));
-    at(380, () => setReveal(r => ({ ...r, eyebrow: true })));
-    at(550, () => { setSplit(true); scramble('TIME GLITCH', 950); });
+    at(250, () => setReveal((r) => ({ ...r, rotor: true })));
+    at(300, () => setReveal((r) => ({ ...r, core: true })));
+    [320, 700, 1500, 2250].forEach((d) => at(d, () => setJolt((j) => j + 1)));
+    at(380, () => setReveal((r) => ({ ...r, eyebrow: true })));
+    at(550, () => {
+      setSplit(true);
+      scramble('TIME GLITCH', 950);
+    });
     at(1560, () => setSplit(false));
-    at(1250, () => setReveal(r => ({ ...r, rule: true })));
-    at(1350, () => setReveal(r => ({ ...r, ledger: true })));
+    at(1250, () => setReveal((r) => ({ ...r, rule: true })));
+    at(1350, () => setReveal((r) => ({ ...r, ledger: true })));
     at(1500, () => setStruck(true));
-    at(1620, () => rewind(sample.decayed, sample.original, 900));
-    at(2250, () => setReveal(r => ({ ...r, note: true })));
-    at(2450, () => setReveal(r => ({ ...r, chip: true })));
-    at(3600, () => { setPhase('window'); onAnnounced?.(); });
+    at(1620, () => rewind(currentVal, initialVal, 950));
+    at(2600, () => setReveal((r) => ({ ...r, note: true })));
+    at(2800, () => setReveal((r) => ({ ...r, chip: true })));
+    // Pause for ~1.8 seconds after rewind finishes (rewind completes around 2570ms):
+    at(4600, () => {
+      setPhase('window');
+      onAnnounced?.();
+    });
 
     return clearAll;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
+
+  /* ── handle active turning false ────────────────────────────────────── */
+  useEffect(() => {
+    if (prevActive.current && !active) {
+      if (phase === 'window' || phase === 'announce') {
+        triggerReset();
+      } else if (phase !== 'reset') {
+        clearAll();
+        setPhase('idle');
+      }
+    }
+    prevActive.current = active;
+  }, [active, phase, clearAll, triggerReset]);
 
   /* ── countdown + T−0 trigger ────────────────────────────────────────── */
   useEffect(() => {
@@ -154,18 +266,15 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
     const tick = () => {
       const left = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
       setRemaining(left);
-      if (left === 0 && !fired.current) {
-        fired.current = true;
-        setPhase('reset');
-        onReset?.();
-        window.setTimeout(() => setPhase('idle'), 1900);
+      if (left === 0 && !fired.current && phase === 'window') {
+        triggerReset();
       }
     };
     tick();
     const id = window.setInterval(tick, 1000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, endsAt]);
+  }, [active, endsAt, phase, triggerReset]);
 
   if (phase === 'idle') return null;
 
@@ -178,30 +287,72 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
     <>
       <style>{CSS}</style>
 
-      {/* ── 1. TAKEOVER ─────────────────────────────────────────────── */}
+      {/* ── 1. TAKEOVER (ANNOUNCE: CURRENT -> INITIAL) ──────────────── */}
       {phase === 'announce' && (
-        <div className="tg-ov" role="alert" aria-label="Time glitch active. All node values rewind to their original points at T minus zero.">
+        <div
+          className="tg-ov"
+          role="alert"
+          aria-label="Time glitch active. Node values rewind from current to initial points."
+        >
           <div className="tg-veil" />
           <div className="tg-scan" />
           {!reduced && <div className="tg-flash" />}
           {!reduced && <div className="tg-seam" />}
-          {!reduced && [0, 1, 2, 3].map(i => <div key={i} className="tg-scrub" style={{ animationDelay: `${180 + i * 320}ms` }} />)}
+          {!reduced &&
+            [0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="tg-scrub"
+                style={{ animationDelay: `${180 + i * 320}ms` }}
+              />
+            ))}
 
-          <div className={`tg-core${jolt ? ' tg-jolt' : ''}`} key={jolt} style={fade(reveal.core, 180)}>
-            <svg className="tg-rotor" width="76" height="76" viewBox="0 0 76 76" aria-hidden="true" style={fade(reveal.rotor)}>
+          <div
+            className={`tg-core${jolt ? ' tg-jolt' : ''}`}
+            key={jolt}
+            style={fade(reveal.core, 180)}
+          >
+            <svg
+              className="tg-rotor"
+              width="76"
+              height="76"
+              viewBox="0 0 76 76"
+              aria-hidden="true"
+              style={fade(reveal.rotor)}
+            >
               <circle cx="38" cy="38" r="35" fill="none" stroke="#2C3550" strokeWidth="1" />
-              <circle cx="38" cy="38" r="28" fill="none" stroke="#6E5424" strokeWidth="1" strokeDasharray="2 6" />
+              <circle
+                cx="38"
+                cy="38"
+                r="28"
+                fill="none"
+                stroke="#6E5424"
+                strokeWidth="1"
+                strokeDasharray="2 6"
+              />
               <g stroke="#5A6379" strokeWidth="1">
-                <line x1="38" y1="4" x2="38" y2="12" /><line x1="72" y1="38" x2="64" y2="38" />
-                <line x1="38" y1="72" x2="38" y2="64" /><line x1="4" y1="38" x2="12" y2="38" />
+                <line x1="38" y1="4" x2="38" y2="12" />
+                <line x1="72" y1="38" x2="64" y2="38" />
+                <line x1="38" y1="72" x2="38" y2="64" />
+                <line x1="4" y1="38" x2="12" y2="38" />
               </g>
               <g className={reduced ? '' : 'tg-hand'}>
-                <line x1="38" y1="38" x2="38" y2="14" stroke="#E0A83E" strokeWidth="2" strokeLinecap="round" />
+                <line
+                  x1="38"
+                  y1="38"
+                  x2="38"
+                  y2="14"
+                  stroke="#E0A83E"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
               </g>
               <circle cx="38" cy="38" r="2.5" fill="#E0A83E" />
             </svg>
 
-            <div className="tg-eyebrow" style={fade(reveal.eyebrow)}>TEMPORAL ANOMALY DETECTED</div>
+            <div className="tg-eyebrow" style={fade(reveal.eyebrow)}>
+              TEMPORAL ANOMALY DETECTED
+            </div>
 
             <h1 className={`tg-title${split ? ' tg-split' : ''}`} data-text={titleText}>
               {titleText || '\u00a0'}
@@ -210,13 +361,21 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
             <div className="tg-rule" style={{ transform: `scaleX(${reveal.rule ? 1 : 0})` }} />
 
             <div className="tg-ledger" style={fade(reveal.ledger, 250)}>
-              <span className={`tg-old${struck ? ' tg-struck' : ''}`}>{sample.decayed}</span>
-              <span className="tg-rew">◀◀ REWIND</span>
-              <span className="tg-new">{rewound}</span>
+              <div className="tg-ledger-item">
+                <span className="tg-ledger-label tg-label-current">CURRENT</span>
+                <span className={`tg-old${struck ? ' tg-struck' : ''}`}>{currentVal}</span>
+              </div>
+              <div className="tg-ledger-arrow">
+                <span className="tg-rew">◀◀ REWIND</span>
+              </div>
+              <div className="tg-ledger-item">
+                <span className="tg-ledger-label tg-label-initial">INITIAL</span>
+                <span className="tg-new">{rewound}</span>
+              </div>
             </div>
 
             <div className="tg-note" style={fade(reveal.note, 350)}>
-              EVERY NODE RETURNS TO ITS ORIGINAL VALUE AT T−0
+              {slotLabel ? `NODE ${slotLabel} // ` : ''}EVERY NODE RETURNS TO ITS INITIAL VALUE AT T−0
             </div>
 
             <div className="tg-chip" style={fade(reveal.chip, 350)}>
@@ -226,15 +385,97 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
         </div>
       )}
 
-      {/* ── 2. WINDOW — no top bar; the countdown runs silently until T−0.
-           (Remaining time stays visible in the side-panel TIME GLITCH popup.) ── */}
+      {/* ── 2. WINDOW — countdown runs silently until T−0 ────────────── */}
       {phase === 'window' && null}
 
-      {/* ── 3. RESET PULSE ──────────────────────────────────────────── */}
+      {/* ── 3. RESET / RETURN OVERLAY (INITIAL -> CURRENT) ───────────── */}
       {phase === 'reset' && (
-        <div className="tg-reset" role="status">
+        <div
+          className="tg-ov tg-reset-ov"
+          role="status"
+          aria-label="Time glitch concluded. Point values returned to current decayed level."
+        >
+          <div className="tg-veil" />
+          <div className="tg-scan" />
           {!reduced && <div className="tg-wave" />}
-          <div className="tg-tag">VALUES RESTORED</div>
+          {!reduced && <div className="tg-flash" style={{ background: '#E84D7E' }} />}
+          {!reduced && <div className="tg-seam" style={{ background: '#E84D7E' }} />}
+
+          <div className="tg-core">
+            <svg
+              className="tg-rotor"
+              width="76"
+              height="76"
+              viewBox="0 0 76 76"
+              aria-hidden="true"
+            >
+              <circle cx="38" cy="38" r="35" fill="none" stroke="#2C3550" strokeWidth="1" />
+              <circle
+                cx="38"
+                cy="38"
+                r="28"
+                fill="none"
+                stroke="#6E2435"
+                strokeWidth="1"
+                strokeDasharray="2 6"
+              />
+              <g stroke="#5A6379" strokeWidth="1">
+                <line x1="38" y1="4" x2="38" y2="12" />
+                <line x1="72" y1="38" x2="64" y2="38" />
+                <line x1="38" y1="72" x2="38" y2="64" />
+                <line x1="4" y1="38" x2="12" y2="38" />
+              </g>
+              <g className={reduced ? '' : 'tg-hand-forward'}>
+                <line
+                  x1="38"
+                  y1="38"
+                  x2="38"
+                  y2="14"
+                  stroke="#E84D7E"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </g>
+              <circle cx="38" cy="38" r="2.5" fill="#E84D7E" />
+            </svg>
+
+            <div className="tg-eyebrow" style={{ color: '#E84D7E' }}>
+              TEMPORAL ANOMALY COLLAPSED // TIME GLITCH ENDED
+            </div>
+
+            <h1 className="tg-title" style={{ color: '#F2F5FA' }}>
+              DECAY RESTORED
+            </h1>
+
+            <div className="tg-rule" style={{ transform: 'scaleX(1)' }} />
+
+            <div className="tg-ledger">
+              <div className="tg-ledger-item">
+                <span className="tg-ledger-label tg-label-initial">INITIAL</span>
+                <span className={`tg-old tg-initial-old${resetStruck ? ' tg-struck' : ''}`}>
+                  {initialVal}
+                </span>
+              </div>
+              <div className="tg-ledger-arrow">
+                <span className="tg-decay-rew">▶▶ DECAY RETURN</span>
+              </div>
+              <div className="tg-ledger-item">
+                <span className="tg-ledger-label tg-label-current">CURRENT</span>
+                <span className="tg-val-decayed">{decayCount}</span>
+              </div>
+            </div>
+
+            <div className="tg-note">
+              {slotLabel ? `NODE ${slotLabel} // ` : ''}EVERY NODE RETURNS TO ITS CURRENT DECAYED VALUE
+            </div>
+
+            <div
+              className="tg-chip"
+              style={{ borderColor: '#6E2435', borderLeftColor: '#E84D7E' }}
+            >
+              NORMAL SCORING <b>RESUMED</b>
+            </div>
+          </div>
         </div>
       )}
     </>
@@ -243,11 +484,12 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
 
 /* ─────────────────────────────────────────────────────────────────────────
    Styles. Self-contained so the component drops in without touching
-   index.css — move this block there verbatim if you prefer.
+   index.css.
    ───────────────────────────────────────────────────────────────────────── */
 const CSS = `
 .tg-ov{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:'IBM Plex Mono',ui-monospace,monospace}
-.tg-veil{position:absolute;inset:0;background:rgba(5,7,12,.90)}
+.tg-reset-ov{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:'IBM Plex Mono',ui-monospace,monospace}
+.tg-veil{position:absolute;inset:0;background:rgba(5,7,12,.92)}
 .tg-scan{position:absolute;inset:0;opacity:.55;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.42) 2px,rgba(0,0,0,.42) 3px)}
 .tg-flash{position:absolute;inset:0;background:#E0A83E;mix-blend-mode:screen;opacity:0;animation:tg-flash .28s steps(5,end) 1}
 @keyframes tg-flash{0%{opacity:0}25%{opacity:.85}50%{opacity:0}75%{opacity:.4}100%{opacity:0}}
@@ -269,6 +511,8 @@ const CSS = `
 .tg-rotor{margin:0 auto 22px;display:block}
 .tg-hand{transform-origin:38px 38px;animation:tg-hand 2s cubic-bezier(.12,.72,.2,1) 250ms forwards}
 @keyframes tg-hand{from{transform:rotate(0)}to{transform:rotate(-1080deg)}}
+.tg-hand-forward{transform-origin:38px 38px;animation:tg-hand-forward 2s cubic-bezier(.12,.72,.2,1) 250ms forwards}
+@keyframes tg-hand-forward{from{transform:rotate(-1080deg)}to{transform:rotate(0)}}
 
 .tg-eyebrow{font-size:10px;letter-spacing:.34em;color:#E0A83E;margin-bottom:14px}
 .tg-title{position:relative;font-family:'Oswald',sans-serif;font-weight:700;font-size:clamp(38px,7.4vw,82px);line-height:.94;letter-spacing:.10em;color:#F2F5FA;margin:0;white-space:nowrap}
@@ -279,32 +523,35 @@ const CSS = `
 @keyframes tg-rgb{0%{transform:translate(-3px,1px)}50%{transform:translate(3px,-2px)}100%{transform:translate(-2px,2px)}}
 
 .tg-rule{height:1px;background:linear-gradient(to right,transparent,#2C3550 20%,#2C3550 80%,transparent);margin:20px auto;max-width:520px;transition:transform .4s cubic-bezier(.2,.9,.2,1)}
-.tg-ledger{display:flex;align-items:center;justify-content:center;gap:18px;font-family:'Oswald',sans-serif;font-weight:500}
-.tg-old{font-size:30px;color:#E84D7E;position:relative}
+
+.tg-ledger{display:flex;align-items:center;justify-content:center;gap:20px;font-family:'Oswald',sans-serif;font-weight:500;margin:12px 0}
+.tg-ledger-item{display:flex;flex-direction:column;align-items:center;gap:4px}
+.tg-ledger-arrow{display:flex;align-items:center;justify-content:center}
+.tg-ledger-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.22em;font-weight:600}
+.tg-label-current{color:#E84D7E}
+.tg-label-initial{color:#5ED6E3}
+
+.tg-old{font-size:clamp(28px,4.5vw,38px);color:#E84D7E;position:relative;min-width:3ch;text-align:center}
+.tg-initial-old{color:#5ED6E3}
+.tg-initial-old::after{background:#5ED6E3!important}
 .tg-old::after{content:'';position:absolute;left:-4px;right:-4px;top:52%;height:2px;background:#E84D7E;transform:scaleX(0);transform-origin:left}
 .tg-struck::after{transform:scaleX(1);transition:transform .22s steps(4,end)}
-.tg-rew{font-size:12px;letter-spacing:.2em;color:#E0A83E;font-family:'IBM Plex Mono',monospace}
-.tg-new{font-size:44px;color:#5ED6E3;min-width:3ch;text-align:left}
+
+.tg-rew{font-size:11px;letter-spacing:.2em;color:#E0A83E;font-family:'IBM Plex Mono',monospace;padding:4px 10px;border:1px solid rgba(224,168,62,.4);background:rgba(224,168,62,.1);border-radius:2px}
+.tg-decay-rew{font-size:11px;letter-spacing:.2em;color:#E84D7E;font-family:'IBM Plex Mono',monospace;padding:4px 10px;border:1px solid rgba(232,77,126,.4);background:rgba(232,77,126,.1);border-radius:2px}
+
+.tg-new{font-size:clamp(34px,5.5vw,48px);color:#5ED6E3;min-width:3ch;text-align:center;text-shadow:0 0 16px rgba(94,214,227,.45)}
+.tg-val-decayed{font-size:clamp(34px,5.5vw,48px);color:#E84D7E;min-width:3ch;text-align:center;text-shadow:0 0 16px rgba(232,77,126,.45)}
+
 .tg-note{font-size:10px;letter-spacing:.22em;color:#8B93A9;margin-top:16px}
 .tg-chip{display:inline-flex;align-items:center;gap:10px;margin-top:22px;padding:8px 16px;border:1px solid #6E5424;border-left:2px solid #E0A83E;background:rgba(14,18,32,.9);font-size:10px;letter-spacing:.2em;color:#8B93A9}
 .tg-chip b{font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:.06em;color:#E0A83E;font-weight:500}
 
-.tg-bar{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;align-items:center;gap:14px;padding:7px 20px;background:#120E06;border-bottom:1px solid #6E5424;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:#E0A83E;animation:tg-barin .35s cubic-bezier(.2,.9,.2,1)}
-@keyframes tg-barin{from{transform:translateY(-100%)}to{transform:translateY(0)}}
-.tg-dot{width:6px;height:6px;background:#E0A83E;animation:tg-pulse 1.6s steps(2,end) infinite}
-@keyframes tg-pulse{0%,60%{opacity:1}61%,100%{opacity:.25}}
-.tg-bar-sub{color:#8B93A9}
-.tg-bar-right{margin-left:auto;color:#8B93A9}
-.tg-bar b{color:#F2F5FA;font-weight:500}
-
-.tg-reset{position:fixed;inset:0;z-index:80;pointer-events:none;display:flex;align-items:center;justify-content:center}
 .tg-wave{position:absolute;width:40px;height:40px;border:1px solid #5ED6E3;border-radius:50%;animation:tg-wave .85s cubic-bezier(.16,.84,.3,1) forwards}
 @keyframes tg-wave{0%{opacity:.9;transform:scale(.2)}100%{opacity:0;transform:scale(34)}}
-.tg-tag{font-family:'Oswald',sans-serif;font-size:clamp(26px,4.6vw,46px);font-weight:600;letter-spacing:.24em;color:#5ED6E3;animation:tg-tag 1.5s ease forwards}
-@keyframes tg-tag{0%{opacity:0;transform:scale(.94)}14%{opacity:1;transform:scale(1)}72%{opacity:1}100%{opacity:0}}
 
 @media (prefers-reduced-motion: reduce){
-  .tg-jolt,.tg-split::before,.tg-split::after,.tg-flash,.tg-seam,.tg-scrub,.tg-hand,.tg-dot,.tg-wave{animation:none!important}
+  .tg-jolt,.tg-split::before,.tg-split::after,.tg-flash,.tg-seam,.tg-scrub,.tg-hand,.tg-hand-forward,.tg-wave{animation:none!important}
   .tg-title::before,.tg-title::after{opacity:0!important}
 }
 `;

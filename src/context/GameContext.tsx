@@ -166,7 +166,14 @@ interface GameContextType {
   glitchEndsAt: number | null;
   glitchLabel: string | null;
   /** Real decayed-vs-restored values for the glitch takeover to animate. */
-  glitchSample: { original: number; decayed: number };
+  glitchSample: {
+    initial: number;
+    current: number;
+    original: number;
+    decayed: number;
+    slot?: string;
+    title?: string;
+  };
 
   // Actions
   choosePath: (path: PathId) => Promise<ActionResult>;
@@ -575,25 +582,48 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const glitchEndsAt = glitch ? new Date(glitch.endsAt).getTime() : null;
 
   /**
-   * The numbers the glitch takeover animates rewinding.
+   * The numbers the glitch takeover animates rewinding (and restoring at window end).
    *
-   * Taken from the most decayed node actually in front of the player, so the
-   * animation shows a value they can go and collect. During a window the board
-   * already quotes everything at full value, so `decayed` is recovered from
-   * the headline gap rather than re-derived — the client never computes decay.
+   * Derived dynamically from the active/inspected challenge, or the most decayed open
+   * node on the active path, ensuring players see their actual current points and initial
+   * target points rather than a hardcoded fixed value.
    */
   const glitchSample = useMemo(() => {
-    const open = visibleChallenges.filter((c) => c.status === 'open');
-    const worst = open.reduce<Challenge | null>(
-      (acc, c) => (!acc || c.points - c.currentPoints > acc.points - acc.currentPoints ? c : acc),
-      null,
-    );
-    if (!worst || worst.points === 0) return { original: 500, decayed: 300 };
+    const decayedOpen = visibleChallenges.find((c) => c.status === 'open' && c.currentPoints < c.points);
+    const activeIsDecayed = activeChallenge && activeChallenge.currentPoints < activeChallenge.points;
+    const target = (activeIsDecayed ? activeChallenge : null)
+      ?? decayedOpen
+      ?? activeChallenge
+      ?? visibleChallenges.find((c) => c.status === 'open')
+      ?? visibleChallenges[0]
+      ?? null;
+
+    if (!target || target.points === 0) {
+      return { initial: 500, current: 300, original: 500, decayed: 300 };
+    }
+
+    const initial = target.points;
+    let current = target.currentPoints;
+
+    // If currentPoints is identical to initial (e.g. 0 solves or backend already boosted during glitch),
+    // derive the standard decayed level from minPoints or 65% of initial so rewind/return is perceptible:
+    if (current >= initial) {
+      if (target.minPoints < initial) {
+        current = target.minPoints;
+      } else {
+        current = Math.max(10, Math.round(initial * 0.65));
+      }
+    }
+
     return {
-      original: worst.points,
-      decayed: worst.currentPoints < worst.points ? worst.currentPoints : worst.minPoints,
+      initial,
+      current,
+      original: initial,
+      decayed: current,
+      slot: target.slot,
+      title: target.title,
     };
-  }, [visibleChallenges]);
+  }, [visibleChallenges, activeChallenge]);
 
   /**
    * Milliseconds to the next boundary: the gun while pending, the close while
