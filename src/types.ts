@@ -127,7 +127,8 @@ export type ViewType =
   | 'ADMIN_CHALLENGES'
   | 'ADMIN_GLITCHES'
   | 'ADMIN_TEAMS'
-  | 'ADMIN_ACTIVITY';
+  | 'ADMIN_ACTIVITY'
+  | 'ADMIN_LEADERBOARD';
 
 export interface AdminTeamInfo {
   id: string;
@@ -136,6 +137,7 @@ export interface AdminTeamInfo {
   joinCode: string;
   banned: boolean;
   score: number;
+  solveCount?: number;
   createdAt: string;
   members: {
     userId: string;

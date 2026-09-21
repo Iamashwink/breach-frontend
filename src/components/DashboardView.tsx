@@ -93,16 +93,27 @@ export const DashboardView: React.FC = () => {
     }
 
     if (!chosenPath) {
+      if (welcomeOpen) {
+        return (
+          <button
+            id={`btn-enter-path-${code.toLowerCase()}`}
+            disabled
+            title={`Solve ${welcome?.title ?? 'the welcome challenge'} first — it gates path selection.`}
+            className="mt-3 w-full px-4 py-2.5 text-[11.5px] font-bold tracking-[0.18em] border border-[#2B354C] bg-[#0E131F] text-[#C6CCDA] cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <span className="text-[#E84D7E]">🔒</span> SEALED — DECODE FIRST
+          </button>
+        );
+      }
       return (
         <button
           id={`btn-enter-path-${code.toLowerCase()}`}
           onClick={() => choosePath(code)}
-          disabled={welcomeOpen || busy}
-          title={welcomeOpen ? `Solve ${welcome?.title ?? 'the welcome challenge'} first — it gates path selection.` : undefined}
-          className="mt-3 w-full px-5 py-2.5 text-[12px] font-bold tracking-[0.2em] text-[#06232A] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+          disabled={busy}
+          className="mt-3 w-full px-5 py-2.5 text-[12px] font-bold tracking-[0.2em] text-[#06232A] cursor-pointer hover:brightness-110 transition-all shadow-[0_0_15px_rgba(0,0,0,0.4)]"
           style={{ background: TONE[code] }}
         >
-          {welcomeOpen ? `SEALED — DECODE FIRST` : `COMMIT TO PATH ${code} →`}
+          COMMIT TO PATH {code} →
         </button>
       );
     }
@@ -230,16 +241,37 @@ export const DashboardView: React.FC = () => {
           id="btn-dashboard-rite"
           onClick={() => navigateTo('CONVERGENCE')}
           disabled={!convergence}
-          className="mt-4 w-full py-3.5 bg-[#5ED6E3] hover:bg-[#7CE3EE] disabled:opacity-30 disabled:cursor-not-allowed text-[#06232A] text-[12px] font-bold tracking-[0.22em] transition-colors cursor-pointer"
+          className={`mt-4 w-full py-4 text-[12px] font-bold tracking-[0.22em] transition-all cursor-pointer ${
+            convergence
+              ? 'bg-[#5ED6E3] hover:bg-[#7CE3EE] text-[#06232A] shadow-[0_0_20px_rgba(94,214,227,0.3)]'
+              : 'bg-[#0E131F] border border-[#2B354C] text-[#C6CCDA] cursor-not-allowed'
+          }`}
         >
-          {convergence
-            ? 'GO TO RITE — THE FINAL FLAG →'
-            : `CONVERGENCE SEALED — ${fragments.length}/3 FRAGMENTS`}
+          {convergence ? (
+            'GO TO RITE — THE FINAL FLAG →'
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              <span className="text-[#E84D7E]">🔒</span>
+              <span>CONVERGENCE SEALED — <b className="text-[#5ED6E3]">{fragments.length}/3</b> FRAGMENTS SECURED</span>
+            </span>
+          )}
         </button>
 
         {team?.joinCode && (
-          <div className="mt-6 text-[11px] tracking-[0.25em] text-[#8B93A9]">
-            CELL {team.name} · JOIN CODE <span className="text-[#5ED6E3] font-bold">{team.joinCode}</span>
+          <div className="mt-6 p-4 border border-[#2B354C] bg-[#0A0D15]/90 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="w-2 h-2 rounded-full bg-[#5ED6E3] shadow-[0_0_8px_#5ED6E3]" />
+              <div>
+                <span className="text-[10.5px] tracking-[0.25em] text-[#A6B2C8] font-semibold">CELL: </span>
+                <span className="text-[13px] font-bold text-[#F2F5FA] font-mono">{team.name}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[10.5px] tracking-[0.25em] text-[#A6B2C8] font-semibold">JOIN CODE:</span>
+              <span className="px-3 py-1 font-mono text-[14px] font-bold tracking-[0.2em] border border-[#5ED6E3]/60 bg-[#5ED6E3]/15 text-[#5ED6E3] select-all">
+                {team.joinCode}
+              </span>
+            </div>
           </div>
         )}
       </div>

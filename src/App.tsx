@@ -27,6 +27,7 @@ import { TimeGlitch } from './components/TimeGlitch';
 
 import { AdminTeams } from './components/admin/AdminTeams';
 import { AdminActivity } from './components/admin/AdminActivity';
+import { AdminLeaderboard } from './components/admin/AdminLeaderboard';
 
 const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, navigateTo } = useGame();
@@ -127,6 +128,7 @@ const AppContent: React.FC = () => {
         case 'ADMIN_GLITCHES': return <AdminGlitches />;
         case 'ADMIN_TEAMS': return <AdminTeams />;
         case 'ADMIN_ACTIVITY': return <AdminActivity />;
+        case 'ADMIN_LEADERBOARD': return <AdminLeaderboard />;
         default: return <AdminDashboard />;
       }
     };

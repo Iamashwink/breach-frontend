@@ -4,6 +4,7 @@ import { ViewType } from '../../types';
 
 const TABS: { label: string; view: ViewType }[] = [
   { label: 'OVERVIEW', view: 'ADMIN' },
+  { label: 'LIVE LEADERBOARD', view: 'ADMIN_LEADERBOARD' },
   { label: 'EVENTS', view: 'ADMIN_EVENTS' },
   { label: 'CHALLENGES', view: 'ADMIN_CHALLENGES' },
   { label: 'TIME GLITCHES', view: 'ADMIN_GLITCHES' },

@@ -367,6 +367,9 @@ export interface AdminChallenge {
   state: 'hidden' | 'visible' | 'locked';
   maxAttempts: number | null;
   author: string | null;
+  pathCode?: string | null;
+  sequence?: number | null;
+  slot?: string | null;
 }
 
 export interface AdminHint {
@@ -378,7 +381,8 @@ export interface AdminHint {
   requiresHintId: string | null;
 }
 
-import { AdminEventStats, AdminSubmissionLog, AdminTeamInfo } from '../types';
+export type { AdminEventStats, AdminSubmissionLog, AdminTeamInfo } from '../types';
+import type { AdminEventStats, AdminSubmissionLog, AdminTeamInfo } from '../types';
 
 export interface AdminTimeGlitch {
   id: string;
@@ -515,6 +519,14 @@ export const api = {
     post<AdminTimeGlitch[]>(`/admin/events/${eventId}/time-glitches/generate`, body),
   adminDeleteGlitch: (eventId: string, glitchId: string) =>
     del(`/admin/events/${eventId}/time-glitches/${glitchId}`),
+  adminDeleteAllGlitches: async (eventId: string) => {
+    try {
+      return await del(`/admin/events/${eventId}/time-glitches`);
+    } catch {
+      const list = await api.adminListGlitches(eventId);
+      return await Promise.all(list.map((g) => api.adminDeleteGlitch(eventId, g.id)));
+    }
+  },
 
   // teams
   adminListTeams: (eventId: string) =>

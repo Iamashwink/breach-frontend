@@ -271,7 +271,14 @@ export const AdminDashboard: React.FC = () => {
             {/* Quick Action Navigation Cards */}
             <div className="mt-8">
               <div className="text-[9px] tracking-[0.3em] text-[#E0A83E] mb-3">■ COMMAND SECTIONS</div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <NavCard
+                  title="LIVE LEADERBOARD"
+                  detail="Real-time rankings & scores"
+                  sub="Live cell standings, solve stats, and freeze controls"
+                  onClick={() => navigateTo('ADMIN_LEADERBOARD')}
+                  btnLabel="OPEN LEADERBOARD →"
+                />
                 <NavCard
                   title="CHALLENGES"
                   detail={`${challenges.length} challenges configured`}

@@ -8,6 +8,94 @@ const STATES = ['hidden', 'visible', 'locked'] as const;
 const DIFF_COLOR: Record<string, string> = { easy: '#5ED6E3', medium: '#E0A83E', hard: '#E84D7E', expert: '#F2F5FA' };
 const STATE_COLOR: Record<string, string> = { visible: '#5ED6E3', hidden: '#5A6379', locked: '#E84D7E' };
 
+const TITLE_TO_PATH_SLOT: Record<string, string> = {
+  // Path A
+  'ashes don’t lie!': 'A1',
+  'ashes don\'t lie!': 'A1',
+  'the budget that doesn\'t add up': 'A2',
+  'the budget that doesn’t add up': 'A2',
+  'the blind spot: iris network log': 'A3',
+  'the blind spot': 'A3',
+  'out of order': 'A4',
+  'ask the bridge': 'A5',
+  'the archive that remembers too much': 'A6',
+  'the archive remembers': 'A7',
+  'the depot terminal': 'A8',
+  'the medium that wasn\'t supposed to survive': 'A9',
+  'the medium that wasn’t supposed to survive': 'A9',
+  'the true identity of iris': 'A10',
+  'the sealed personnel file': 'A10',
+
+  // Path B
+  'the noise nobody checked': 'B1',
+  'echo recover': 'B2',
+  'the 2015 incident breach': 'B3',
+  'the altered manifest': 'B4',
+  'chronos drift': 'B5',
+  'the cutter transmission': 'B6',
+  'quiet host': 'B7',
+  'behind the mirror': 'B8',
+  'follow the name': 'B9',
+  'find beatriz': 'B9',
+  'the echoed memory': 'B10',
+  'caught live': 'B10',
+
+  // Path C
+  'core initialization routine': 'C1',
+  'the training data exploits': 'C2',
+  'git ignore': 'C3',
+  'residual index': 'C4',
+  'the eerie forecast': 'C5',
+  'inference pipeline: memory ingestion': 'C6',
+  'the 404 moment': 'C7',
+  'a point in the storm': 'C8',
+  'the forgotten forecast': 'C9',
+  'race or pay': 'C10',
+  'between check and commit': 'C10',
+
+  // Standalone
+  'transmission zero': 'START',
+  'convergence — the final truth': 'FINAL',
+  'convergence': 'FINAL',
+};
+
+export const getChallengeSlot = (c: AdminChallenge): string => {
+  if (c.slot) return c.slot.toUpperCase();
+  if (c.pathCode && c.sequence) return `${c.pathCode}${c.sequence}`.toUpperCase();
+  const normalized = c.title.trim().toLowerCase();
+  return TITLE_TO_PATH_SLOT[normalized] ?? '—';
+};
+
+export const getPathBadgeStyle = (slot: string) => {
+  const upper = slot.toUpperCase();
+  if (upper.startsWith('A')) {
+    return 'bg-[#5ED6E3]/15 text-[#5ED6E3] border-[#5ED6E3]/50';
+  }
+  if (upper.startsWith('B')) {
+    return 'bg-[#E84D7E]/15 text-[#E84D7E] border-[#E84D7E]/50';
+  }
+  if (upper.startsWith('C')) {
+    return 'bg-[#E0A83E]/15 text-[#E0A83E] border-[#E0A83E]/50';
+  }
+  if (upper === 'FINAL' || upper === 'ECHO' || upper === 'CONVERGENCE') {
+    return 'bg-[#B78AF7]/20 text-[#B78AF7] border-[#B78AF7]/60 shadow-[0_0_8px_rgba(183,138,247,0.3)]';
+  }
+  if (upper === 'START' || upper === 'WELCOME' || upper === 'W0') {
+    return 'bg-[#5ED6E3]/20 text-[#5ED6E3] border-[#5ED6E3]/60';
+  }
+  return 'bg-[#8B93A9]/15 text-[#D5DBE7] border-[#8B93A9]/40';
+};
+
+export const slotOrder = (slot: string): number => {
+  const upper = slot.toUpperCase();
+  if (upper === 'START' || upper === 'W0') return 1;
+  if (upper.startsWith('A')) return 100 + parseInt(upper.replace(/\D/g, '') || '0', 10);
+  if (upper.startsWith('B')) return 200 + parseInt(upper.replace(/\D/g, '') || '0', 10);
+  if (upper.startsWith('C')) return 300 + parseInt(upper.replace(/\D/g, '') || '0', 10);
+  if (upper === 'FINAL' || upper === 'ECHO' || upper === 'CONVERGENCE') return 999;
+  return 500;
+};
+
 export const AdminChallenges: React.FC = () => {
   const { adminEvent, notify } = useGame();
   const [challenges, setChallenges] = useState<AdminChallenge[]>([]);
@@ -18,6 +106,8 @@ export const AdminChallenges: React.FC = () => {
   const [hintsFor, setHintsFor] = useState<string | null>(null);
   const [showCats, setShowCats] = useState(false);
   const [filter, setFilter] = useState<string>('all');
+  const [pathFilter, setPathFilter] = useState<'all' | 'A' | 'B' | 'C' | 'STANDALONE'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -42,7 +132,36 @@ export const AdminChallenges: React.FC = () => {
     void load();
   }, [adminEvent]);
 
-  const filtered = filter === 'all' ? challenges : challenges.filter((c) => c.state === filter);
+  const filtered = challenges
+    .filter((c) => {
+      const slot = getChallengeSlot(c);
+      // State filter
+      if (filter !== 'all' && c.state !== filter) return false;
+      // Path filter
+      if (pathFilter === 'A' && !slot.startsWith('A')) return false;
+      if (pathFilter === 'B' && !slot.startsWith('B')) return false;
+      if (pathFilter === 'C' && !slot.startsWith('C')) return false;
+      if (
+        pathFilter === 'STANDALONE' &&
+        (slot.startsWith('A') || slot.startsWith('B') || slot.startsWith('C'))
+      )
+        return false;
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchSlot = slot.toLowerCase().includes(q);
+        const matchTitle = c.title.toLowerCase().includes(q);
+        const matchCat = catName(c.categoryId).toLowerCase().includes(q);
+        if (!matchSlot && !matchTitle && !matchCat) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const slotA = getChallengeSlot(a);
+      const slotB = getChallengeSlot(b);
+      return slotOrder(slotA) - slotOrder(slotB);
+    });
+
   const catName = (id: number) => categories.find((c) => c.id === id)?.name ?? `#${id}`;
 
   const quickState = async (id: string, state: AdminChallenge['state']) => {
@@ -115,7 +234,66 @@ export const AdminChallenges: React.FC = () => {
           />
         )}
 
-        <div className="mt-4 flex gap-2">
+        {/* Path Filter Tabs & Search Bar */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 bg-[#0B0E16] border border-[#1E2536] p-3">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[9px] tracking-[0.25em] text-[#5A6379] mr-1">PATH:</span>
+            {(['all', 'A', 'B', 'C', 'STANDALONE'] as const).map((p) => {
+              const label = p === 'all' ? 'ALL' : p === 'STANDALONE' ? 'SPECIAL' : `PATH ${p}`;
+              const count =
+                p === 'all'
+                  ? challenges.length
+                  : p === 'STANDALONE'
+                  ? challenges.filter(
+                      (c) =>
+                        !getChallengeSlot(c).startsWith('A') &&
+                        !getChallengeSlot(c).startsWith('B') &&
+                        !getChallengeSlot(c).startsWith('C')
+                    ).length
+                  : challenges.filter((c) => getChallengeSlot(c).startsWith(p)).length;
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPathFilter(p)}
+                  className={`px-3 py-1 text-[10px] tracking-[0.15em] font-bold transition-all cursor-pointer rounded border ${
+                    pathFilter === p
+                      ? p === 'A'
+                        ? 'bg-[#5ED6E3]/20 text-[#5ED6E3] border-[#5ED6E3]'
+                        : p === 'B'
+                        ? 'bg-[#E84D7E]/20 text-[#E84D7E] border-[#E84D7E]'
+                        : p === 'C'
+                        ? 'bg-[#E0A83E]/20 text-[#E0A83E] border-[#E0A83E]'
+                        : 'bg-[#B78AF7]/20 text-[#B78AF7] border-[#B78AF7]'
+                      : 'bg-transparent text-[#5A6379] border-transparent hover:text-[#8B93A9]'
+                  }`}
+                >
+                  {label} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="relative min-w-[220px]">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by path (e.g. A1) or title..."
+              className="w-full bg-[#07090F] border border-[#1E2536] px-3 py-1.5 text-[11px] text-[#D5DBE7] placeholder-[#454C61] focus:border-[#5ED6E3] outline-none"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1.5 text-[11px] text-[#5A6379] hover:text-[#D5DBE7] cursor-pointer"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* State Filter Tabs */}
+        <div className="mt-3 flex gap-2">
           {['all', ...STATES].map((s) => (
             <button
               key={s}
@@ -141,6 +319,7 @@ export const AdminChallenges: React.FC = () => {
             <table className="w-full text-[11px]">
               <thead>
                 <tr className="border-b border-[#1E2536] text-[9px] tracking-[0.2em] text-[#5A6379] bg-[#07090F]/50">
+                  <th className="px-3 py-2.5 text-left w-20">PATH</th>
                   <th className="px-4 py-2.5 text-left">TITLE</th>
                   <th className="px-3 py-2.5 text-left">CATEGORY</th>
                   <th className="px-3 py-2.5 text-left">DIFF</th>
@@ -150,68 +329,80 @@ export const AdminChallenges: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-[#1E2536]/40 hover:bg-[#5ED6E3]/[0.02]">
-                    <td className="px-4 py-2.5 text-[#D5DBE7] max-w-[240px] truncate font-medium">
-                      {c.title}
-                    </td>
-                    <td className="px-3 py-2.5 text-[#8B93A9]">{catName(c.categoryId)}</td>
-                    <td className="px-3 py-2.5 font-semibold" style={{ color: DIFF_COLOR[c.difficulty] }}>
-                      {c.difficulty.toUpperCase()}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-[#D5DBE7] font-mono">
-                      {c.initialPoints} / {c.minPoints}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <select
-                        value={c.state}
-                        onChange={(e) => quickState(c.id, e.target.value as AdminChallenge['state'])}
-                        className="bg-[#0E1220] border border-[#1E2536] px-2 py-1 text-[10px] cursor-pointer outline-none"
-                        style={{ color: STATE_COLOR[c.state] }}
-                      >
-                        {STATES.map((s) => (
-                          <option key={s} value={s}>
-                            {s.toUpperCase()}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setEditId(c.id);
-                            setShowCreate(false);
-                            setHintsFor(null);
-                          }}
-                          className="px-2 py-1 border border-[#1E2536] text-[10px] text-[#5ED6E3] hover:border-[#5ED6E3] cursor-pointer"
+                {filtered.map((c) => {
+                  const slot = getChallengeSlot(c);
+                  return (
+                    <tr key={c.id} className="border-b border-[#1E2536]/40 hover:bg-[#5ED6E3]/[0.02]">
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 text-[10.5px] font-mono font-bold tracking-wider rounded border ${getPathBadgeStyle(
+                            slot
+                          )}`}
                         >
-                          EDIT
-                        </button>
-                        <button
-                          onClick={() => {
-                            setHintsFor(c.id);
-                            setEditId(null);
-                            setShowCreate(false);
-                          }}
-                          className="px-2 py-1 border border-[#1E2536] text-[10px] text-[#E0A83E] hover:border-[#E0A83E] cursor-pointer"
+                          {slot}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-[#D5DBE7] max-w-[260px] truncate font-medium">
+                        {c.title}
+                      </td>
+                      <td className="px-3 py-2.5 text-[#8B93A9]">{catName(c.categoryId)}</td>
+                      <td className="px-3 py-2.5 font-semibold" style={{ color: DIFF_COLOR[c.difficulty] }}>
+                        {c.difficulty.toUpperCase()}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-[#D5DBE7] font-mono">
+                        {c.initialPoints} / {c.minPoints}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <select
+                          value={c.state}
+                          onChange={(e) => quickState(c.id, e.target.value as AdminChallenge['state'])}
+                          className="bg-[#0E1220] border border-[#1E2536] px-2 py-1 text-[10px] cursor-pointer outline-none"
+                          style={{ color: STATE_COLOR[c.state] }}
                         >
-                          HINTS
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(c.id)}
-                          className="px-2 py-1 border border-[#E84D7E]/40 text-[10px] text-[#E84D7E] hover:bg-[#E84D7E]/10 cursor-pointer"
-                        >
-                          DEL
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {STATES.map((s) => (
+                            <option key={s} value={s}>
+                              {s.toUpperCase()}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setEditId(c.id);
+                              setShowCreate(false);
+                              setHintsFor(null);
+                            }}
+                            className="px-2 py-1 border border-[#1E2536] text-[10px] text-[#5ED6E3] hover:border-[#5ED6E3] cursor-pointer"
+                          >
+                            EDIT
+                          </button>
+                          <button
+                            onClick={() => {
+                              setHintsFor(c.id);
+                              setEditId(null);
+                              setShowCreate(false);
+                            }}
+                            className="px-2 py-1 border border-[#1E2536] text-[10px] text-[#E0A83E] hover:border-[#E0A83E] cursor-pointer"
+                          >
+                            HINTS
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(c.id)}
+                            className="px-2 py-1 border border-[#E84D7E]/40 text-[10px] text-[#E84D7E] hover:bg-[#E84D7E]/10 cursor-pointer"
+                          >
+                            DEL
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             {filtered.length === 0 && (
-              <div className="px-4 py-8 text-center text-[#5A6379]">No challenges in this view.</div>
+              <div className="px-4 py-8 text-center text-[#5A6379]">No challenges matching criteria.</div>
             )}
           </div>
         )}
@@ -244,6 +435,11 @@ export const AdminChallenges: React.FC = () => {
             eventId={adminEvent.id}
             challengeId={hintsFor}
             challengeTitle={challenges.find((c) => c.id === hintsFor)?.title ?? '—'}
+            challengeSlot={
+              challenges.find((c) => c.id === hintsFor)
+                ? getChallengeSlot(challenges.find((c) => c.id === hintsFor)!)
+                : undefined
+            }
             onClose={() => setHintsFor(null)}
           />
         )}
@@ -495,8 +691,17 @@ const EditChallengeForm: React.FC<{
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-3 border-b border-[#1E2536]">
-          <div className="text-[11px] tracking-[0.25em] text-[#E0A83E] font-bold font-display">
-            EDIT CHALLENGE // {c.title}
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`px-2 py-0.5 text-[10.5px] font-mono font-bold tracking-wider rounded border ${getPathBadgeStyle(
+                getChallengeSlot(c)
+              )}`}
+            >
+              {getChallengeSlot(c)}
+            </span>
+            <div className="text-[11px] tracking-[0.25em] text-[#E0A83E] font-bold font-display">
+              EDIT CHALLENGE // {c.title}
+            </div>
           </div>
           <button
             type="button"
@@ -555,8 +760,9 @@ const HintManager: React.FC<{
   eventId: string;
   challengeId: string;
   challengeTitle: string;
+  challengeSlot?: string;
   onClose: () => void;
-}> = ({ eventId, challengeId, challengeTitle, onClose }) => {
+}> = ({ eventId, challengeId, challengeTitle, challengeSlot, onClose }) => {
   const { notify } = useGame();
   const [hints, setHints] = useState<AdminHint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -616,8 +822,19 @@ const HintManager: React.FC<{
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-3 border-b border-[#1E2536]">
-          <div className="text-[11px] tracking-[0.25em] text-[#E0A83E] font-bold font-display">
-            HINTS MANAGEMENT // {challengeTitle}
+          <div className="flex items-center gap-2.5">
+            {challengeSlot && (
+              <span
+                className={`px-2 py-0.5 text-[10.5px] font-mono font-bold tracking-wider rounded border ${getPathBadgeStyle(
+                  challengeSlot
+                )}`}
+              >
+                {challengeSlot}
+              </span>
+            )}
+            <div className="text-[11px] tracking-[0.25em] text-[#E0A83E] font-bold font-display">
+              HINTS MANAGEMENT // {challengeTitle}
+            </div>
           </div>
           <button
             type="button"
