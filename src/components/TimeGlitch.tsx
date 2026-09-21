@@ -5,16 +5,15 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
  * -----------------------------------------------------------------------------
  * Three phases, one component:
  *   1. ANNOUNCE  — full-screen takeover when the window opens (~4.6s)
- *                  animates current -> initial points rewind, pauses for review
+ *                  animates CURRENT -> INITIAL transition, pauses for review
  *   2. WINDOW    — live countdown while the window runs
- *   3. RESET     — full temporal collapse animation returning initial -> current
+ *   3. RESET     — full temporal collapse animation returning INITIAL -> CURRENT
  *
  * Mount once, near <ToastBanner /> in App.tsx:
  *
  *   <TimeGlitch
  *     active={glitchActive}
  *     endsAt={glitchEndsAt}
- *     sample={{ initial: 500, current: 300 }}
  *     onReset={() => refresh()}
  *   />
  */
@@ -26,7 +25,7 @@ export interface TimeGlitchProps {
   active: boolean;
   /** Epoch ms when the window closes and points reset. */
   endsAt: number;
-  /** The representative node shown rewinding and returning. */
+  /** Optional representative challenge details (no point numbers displayed). */
   sample?: {
     initial?: number;
     current?: number;
@@ -48,22 +47,16 @@ const fmt = (s: number) => `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
 export const TimeGlitch: React.FC<TimeGlitchProps> = ({
   active,
   endsAt,
-  sample,
   onAnnounced,
   onReset,
 }) => {
-  const initialVal = sample?.initial ?? sample?.original ?? 500;
-  const rawCurrent = sample?.current ?? sample?.decayed ?? 300;
-  const currentVal = rawCurrent < initialVal ? rawCurrent : Math.max(10, Math.round(initialVal * 0.65));
-  const slotLabel = sample?.slot ?? '';
-
   const [phase, setPhase] = useState<TimeGlitchPhase>('idle');
   const [remaining, setRemaining] = useState(0);
   const [titleText, setTitleText] = useState('');
-  const [rewound, setRewound] = useState(currentVal);
-  const [decayCount, setDecayCount] = useState(initialVal);
   const [struck, setStruck] = useState(false);
+  const [targetActive, setTargetActive] = useState(false);
   const [resetStruck, setResetStruck] = useState(false);
+  const [resetSettled, setResetSettled] = useState(false);
   const [jolt, setJolt] = useState(0);
   const [reveal, setReveal] = useState({
     rotor: false,
@@ -119,79 +112,39 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
     raf.current = requestAnimationFrame(frame);
   }, []);
 
-  /* ── counter running backwards: currentVal -> initialVal ──────────── */
-  const rewind = useCallback((from: number, to: number, dur: number) => {
-    const start = performance.now();
-    const frame = (now: number) => {
-      const p = Math.min(1, (now - start) / dur);
-      const eased = 1 - Math.pow(1 - p, 3);
-      let v = Math.round(from + (to - from) * eased);
-      if (p < 0.62 && Math.random() > 0.55) {
-        v = to - ((Math.random() * Math.max(10, Math.abs(to - from) * 0.35)) | 0);
-      }
-      setRewound(Math.max(from, Math.min(to, v)));
-      if (p < 1) {
-        raf.current = requestAnimationFrame(frame);
-      } else {
-        setRewound(to);
-      }
-    };
-    raf.current = requestAnimationFrame(frame);
-  }, []);
-
-  /* ── counter running forward: initialVal -> currentVal ────────────── */
-  const forwardDecay = useCallback((from: number, to: number, dur: number) => {
-    const start = performance.now();
-    const frame = (now: number) => {
-      const p = Math.min(1, (now - start) / dur);
-      const eased = 1 - Math.pow(1 - p, 3);
-      let v = Math.round(from - (from - to) * eased);
-      if (p < 0.62 && Math.random() > 0.55) {
-        v = to + ((Math.random() * Math.max(10, Math.abs(from - to) * 0.35)) | 0);
-      }
-      setDecayCount(Math.max(to, Math.min(from, v)));
-      if (p < 1) {
-        raf.current = requestAnimationFrame(frame);
-      } else {
-        setDecayCount(to);
-      }
-    };
-    raf.current = requestAnimationFrame(frame);
-  }, []);
-
-  /* ── reset / return animation sequence ────────────────────────────── */
+  /* ── reset / return animation sequence: INITIAL -> CURRENT ────────── */
   const triggerReset = useCallback(() => {
     if (fired.current) return;
     fired.current = true;
     clearAll();
     setPhase('reset');
     setResetStruck(false);
-    setDecayCount(initialVal);
+    setResetSettled(false);
 
     if (reduced) {
       setResetStruck(true);
-      setDecayCount(currentVal);
+      setResetSettled(true);
       at(600, () => onReset?.());
       at(2400, () => setPhase('idle'));
       return;
     }
 
     at(400, () => setResetStruck(true));
-    at(550, () => forwardDecay(initialVal, currentVal, 1000));
+    at(600, () => setResetSettled(true));
     at(1600, () => onReset?.());
-    // Pause on final decayed value for ~1.4s so the player clearly reads it:
+    // Pause on CURRENT for ~1.4s so the player clearly reads it:
     at(3000, () => setPhase('idle'));
-  }, [clearAll, initialVal, currentVal, reduced, at, onReset, forwardDecay]);
+  }, [clearAll, reduced, at, onReset]);
 
-  /* ── announcement sequence ──────────────────────────────────────────── */
+  /* ── announcement sequence: CURRENT -> INITIAL ─────────────────────── */
   useEffect(() => {
     if (!active) return;
 
     clearAll();
     fired.current = false;
     setPhase('announce');
-    setRewound(currentVal);
     setStruck(false);
+    setTargetActive(false);
     setReveal({
       rotor: false,
       eyebrow: false,
@@ -214,7 +167,7 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
       });
       setTitleText('TIME GLITCH');
       setStruck(true);
-      setRewound(initialVal);
+      setTargetActive(true);
       at(3500, () => {
         setPhase('window');
         onAnnounced?.();
@@ -234,10 +187,10 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
     at(1250, () => setReveal((r) => ({ ...r, rule: true })));
     at(1350, () => setReveal((r) => ({ ...r, ledger: true })));
     at(1500, () => setStruck(true));
-    at(1620, () => rewind(currentVal, initialVal, 950));
-    at(2600, () => setReveal((r) => ({ ...r, note: true })));
-    at(2800, () => setReveal((r) => ({ ...r, chip: true })));
-    // Pause for ~1.8 seconds after rewind finishes (rewind completes around 2570ms):
+    at(1650, () => setTargetActive(true));
+    at(2400, () => setReveal((r) => ({ ...r, note: true })));
+    at(2600, () => setReveal((r) => ({ ...r, chip: true })));
+    // Pause for ~1.9 seconds after INITIAL activates so players absorb it:
     at(4600, () => {
       setPhase('window');
       onAnnounced?.();
@@ -292,7 +245,7 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
         <div
           className="tg-ov"
           role="alert"
-          aria-label="Time glitch active. Node values rewind from current to initial points."
+          aria-label="Time glitch active. All challenge values rewind from current to initial."
         >
           <div className="tg-veil" />
           <div className="tg-scan" />
@@ -361,21 +314,17 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
             <div className="tg-rule" style={{ transform: `scaleX(${reveal.rule ? 1 : 0})` }} />
 
             <div className="tg-ledger" style={fade(reveal.ledger, 250)}>
-              <div className="tg-ledger-item">
-                <span className="tg-ledger-label tg-label-current">CURRENT</span>
-                <span className={`tg-old${struck ? ' tg-struck' : ''}`}>{currentVal}</span>
-              </div>
-              <div className="tg-ledger-arrow">
-                <span className="tg-rew">◀◀ REWIND</span>
-              </div>
-              <div className="tg-ledger-item">
-                <span className="tg-ledger-label tg-label-initial">INITIAL</span>
-                <span className="tg-new">{rewound}</span>
-              </div>
+              <span className={`tg-term tg-term-current${struck ? ' tg-struck' : ''}`}>
+                CURRENT
+              </span>
+              <span className="tg-rew">◀◀ REWIND</span>
+              <span className={`tg-term tg-term-initial${targetActive ? ' tg-active' : ''}`}>
+                INITIAL
+              </span>
             </div>
 
             <div className="tg-note" style={fade(reveal.note, 350)}>
-              {slotLabel ? `NODE ${slotLabel} // ` : ''}EVERY NODE RETURNS TO ITS INITIAL VALUE AT T−0
+              EVERY NODE RETURNS TO ITS INITIAL VALUE AT T−0
             </div>
 
             <div className="tg-chip" style={fade(reveal.chip, 350)}>
@@ -393,7 +342,7 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
         <div
           className="tg-ov tg-reset-ov"
           role="status"
-          aria-label="Time glitch concluded. Point values returned to current decayed level."
+          aria-label="Time glitch concluded. Challenge values returned to current decayed level."
         >
           <div className="tg-veil" />
           <div className="tg-scan" />
@@ -450,23 +399,17 @@ export const TimeGlitch: React.FC<TimeGlitchProps> = ({
             <div className="tg-rule" style={{ transform: 'scaleX(1)' }} />
 
             <div className="tg-ledger">
-              <div className="tg-ledger-item">
-                <span className="tg-ledger-label tg-label-initial">INITIAL</span>
-                <span className={`tg-old tg-initial-old${resetStruck ? ' tg-struck' : ''}`}>
-                  {initialVal}
-                </span>
-              </div>
-              <div className="tg-ledger-arrow">
-                <span className="tg-decay-rew">▶▶ DECAY RETURN</span>
-              </div>
-              <div className="tg-ledger-item">
-                <span className="tg-ledger-label tg-label-current">CURRENT</span>
-                <span className="tg-val-decayed">{decayCount}</span>
-              </div>
+              <span className={`tg-term tg-term-initial${resetStruck ? ' tg-struck' : ''}`}>
+                INITIAL
+              </span>
+              <span className="tg-decay-rew">▶▶ DECAY RETURN</span>
+              <span className={`tg-term tg-term-current${resetSettled ? ' tg-active' : ''}`}>
+                CURRENT
+              </span>
             </div>
 
             <div className="tg-note">
-              {slotLabel ? `NODE ${slotLabel} // ` : ''}EVERY NODE RETURNS TO ITS CURRENT DECAYED VALUE
+              EVERY NODE RETURNS TO ITS CURRENT DECAYED VALUE
             </div>
 
             <div
@@ -524,24 +467,17 @@ const CSS = `
 
 .tg-rule{height:1px;background:linear-gradient(to right,transparent,#2C3550 20%,#2C3550 80%,transparent);margin:20px auto;max-width:520px;transition:transform .4s cubic-bezier(.2,.9,.2,1)}
 
-.tg-ledger{display:flex;align-items:center;justify-content:center;gap:20px;font-family:'Oswald',sans-serif;font-weight:500;margin:12px 0}
-.tg-ledger-item{display:flex;flex-direction:column;align-items:center;gap:4px}
-.tg-ledger-arrow{display:flex;align-items:center;justify-content:center}
-.tg-ledger-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.22em;font-weight:600}
-.tg-label-current{color:#E84D7E}
-.tg-label-initial{color:#5ED6E3}
+.tg-ledger{display:flex;align-items:center;justify-content:center;gap:24px;font-family:'Oswald',sans-serif;margin:18px 0}
+.tg-term{font-family:'Oswald',sans-serif;font-weight:700;font-size:clamp(30px,5.5vw,52px);letter-spacing:.14em;position:relative;display:inline-block;padding:0 8px;transition:all .35s cubic-bezier(.2,.9,.2,1)}
+.tg-term-current{color:#E84D7E}
+.tg-term-initial{color:#5ED6E3}
+.tg-term-initial.tg-active{text-shadow:0 0 24px rgba(94,214,227,.75),0 0 48px rgba(94,214,227,.4);transform:scale(1.06)}
+.tg-term-current.tg-active{text-shadow:0 0 24px rgba(232,77,126,.75),0 0 48px rgba(232,77,126,.4);transform:scale(1.06)}
+.tg-term::after{content:'';position:absolute;left:-4px;right:-4px;top:52%;height:3px;background:currentColor;transform:scaleX(0);transform-origin:left}
+.tg-struck::after{transform:scaleX(1);transition:transform .24s steps(4,end)}
 
-.tg-old{font-size:clamp(28px,4.5vw,38px);color:#E84D7E;position:relative;min-width:3ch;text-align:center}
-.tg-initial-old{color:#5ED6E3}
-.tg-initial-old::after{background:#5ED6E3!important}
-.tg-old::after{content:'';position:absolute;left:-4px;right:-4px;top:52%;height:2px;background:#E84D7E;transform:scaleX(0);transform-origin:left}
-.tg-struck::after{transform:scaleX(1);transition:transform .22s steps(4,end)}
-
-.tg-rew{font-size:11px;letter-spacing:.2em;color:#E0A83E;font-family:'IBM Plex Mono',monospace;padding:4px 10px;border:1px solid rgba(224,168,62,.4);background:rgba(224,168,62,.1);border-radius:2px}
-.tg-decay-rew{font-size:11px;letter-spacing:.2em;color:#E84D7E;font-family:'IBM Plex Mono',monospace;padding:4px 10px;border:1px solid rgba(232,77,126,.4);background:rgba(232,77,126,.1);border-radius:2px}
-
-.tg-new{font-size:clamp(34px,5.5vw,48px);color:#5ED6E3;min-width:3ch;text-align:center;text-shadow:0 0 16px rgba(94,214,227,.45)}
-.tg-val-decayed{font-size:clamp(34px,5.5vw,48px);color:#E84D7E;min-width:3ch;text-align:center;text-shadow:0 0 16px rgba(232,77,126,.45)}
+.tg-rew{font-size:12px;letter-spacing:.22em;color:#E0A83E;font-family:'IBM Plex Mono',monospace;padding:6px 14px;border:1px solid rgba(224,168,62,.4);background:rgba(224,168,62,.1);border-radius:2px;font-weight:600}
+.tg-decay-rew{font-size:12px;letter-spacing:.22em;color:#E84D7E;font-family:'IBM Plex Mono',monospace;padding:6px 14px;border:1px solid rgba(232,77,126,.4);background:rgba(232,77,126,.1);border-radius:2px;font-weight:600}
 
 .tg-note{font-size:10px;letter-spacing:.22em;color:#8B93A9;margin-top:16px}
 .tg-chip{display:inline-flex;align-items:center;gap:10px;margin-top:22px;padding:8px 16px;border:1px solid #6E5424;border-left:2px solid #E0A83E;background:rgba(14,18,32,.9);font-size:10px;letter-spacing:.2em;color:#8B93A9}
